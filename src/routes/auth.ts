@@ -56,4 +56,56 @@ userRouter.post("/register", async (req, res) => {
     }
 
 })
+userRouter.post("/login", async (req, res) => {
+    const parsedbody = loginschema.safeParse(req.body)
+
+    if (!parsedbody.success) {
+        return res.status(400).json({
+            message: "Enter all the valid fields",
+            success: true
+        })
+    }
+    try {
+        const { email, passwordHash } = parsedbody.data
+        // console.log(passwordHash)
+        const user = await prisma.user.findUnique({ where: { email } })
+        if (!user) {
+            return res.status(404).json({
+                message: "Email does not exits ",
+                success: false
+            })
+        }
+        // console.log(user.passwordHash)
+
+        const match = await bcyrpt.compare(passwordHash, (user as any).passwordHash)
+        if (match) {
+            const token = jwt.sign({ id: user.id }, JWT_USER_SEC, { expiresIn: "1h" })
+            return res.status(200).json({
+                message: "User login successfully",
+                success: true,
+                token,
+                name: user.name,
+                email: user.email
+            })
+
+        }
+        else {
+            return res.status(404).json({
+                message: "Incorrect password",
+                success: false
+            })
+        }
+
+
+
+    }
+    catch (err: any) {
+        console.log(err);
+        return res.status(500).json({
+            message: "Something went wrong",
+            success: false
+        })
+    }
+})
+
 export { userRouter }
