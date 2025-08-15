@@ -4,9 +4,10 @@ import { Router } from "express"
 import { loginschema, registerschema } from "../utils/validation";
 import { PrismaClient } from "@prisma/client"
 import { error } from "console";
-import { success } from "zod";
+import { email, success } from "zod";
 import jwt from "jsonwebtoken"
 import { AuthRequest, userMiddleware } from "../middleware/authmiddleware";
+import { create } from "domain";
 const userRouter: Router = Router();
 const JWT_USER_SEC = process.env.SECRET_KEY || ""
 const prisma = new PrismaClient();
@@ -106,6 +107,36 @@ userRouter.post("/login", async (req, res) => {
             success: false
         })
     }
+})
+userRouter.get("/me", userMiddleware , async(req:AuthRequest , res)=>{
+    const userId = (req as any).user?.id
+    // console.log(userId)
+    try{
+  const user = await prisma.user.findUnique({where:{id:userId}})
+    if(!user){
+        return res.status(400).json({
+            message:"User Not Logged In",
+            success:false
+        })
+    }
+    else{
+        res.json({
+            message:"Found the user",
+            success:true,
+            name:user.name,
+            email:user.email,
+            create:user.createdAt
+        })
+    }
+    }
+    catch(err:any){
+        return res.status(500).json({
+            message:"Something went wrong",
+            success:false
+        })
+    }
+  
+
 })
 
 export { userRouter }
