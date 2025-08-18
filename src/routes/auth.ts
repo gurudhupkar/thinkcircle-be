@@ -138,5 +138,31 @@ userRouter.get("/me", userMiddleware , async(req:AuthRequest , res)=>{
   
 
 })
+userRouter.post("update_email" , userMiddleware , async (req:AuthRequest , res)=>{
+    const userId = (req as any).user?.id
+   const {email} = req.body
+    try{
+        const updateuser = await prisma.user.update({
+            where:{id:userId},
+            data:{email:email}
+        })
+        if(!updateuser){
+            return res.status(400).json({
+                message:"Failed to update the user",
+                success:false
+            })
+        }
+        else{
+            res.status(200).json({
+                message:"Email updated successfully",
+                success:true
+            })
+        }
 
+    }catch(error:any){
+        return res.status(500).json({
+            message:"Failed to update the email"
+        })
+    }
+})
 export { userRouter }
