@@ -138,7 +138,7 @@ userRouter.get("/me", userMiddleware , async(req:AuthRequest , res)=>{
   
 
 })
-userRouter.post("update_email" , userMiddleware , async (req:AuthRequest , res)=>{
+userRouter.post("/update_email" , userMiddleware , async (req:AuthRequest , res)=>{
     const userId = (req as any).user?.id
    const {email} = req.body
     try{
