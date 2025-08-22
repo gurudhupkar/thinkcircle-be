@@ -4,7 +4,7 @@ import { Router } from "express"
 import { loginschema, registerschema } from "../utils/validation";
 import { PrismaClient } from "@prisma/client"
 import { error } from "console";
-import { email, success } from "zod";
+import { email, success, tuple } from "zod";
 import jwt from "jsonwebtoken"
 import { AuthRequest, userMiddleware } from "../middleware/authmiddleware";
 import { create } from "domain";
