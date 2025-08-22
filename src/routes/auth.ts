@@ -1,7 +1,7 @@
 import express from "express"
 import bcyrpt from "bcrypt"
 import { Router } from "express"
-import { loginschema, registerschema } from "../utils/validation";
+import { loginschema, registerschema, updatePasswordSchema } from "../utils/validation";
 import { PrismaClient } from "@prisma/client"
 import { error } from "console";
 import { email, success, tuple } from "zod";
@@ -165,4 +165,55 @@ userRouter.post("/update_email" , userMiddleware , async (req:AuthRequest , res)
         })
     }
 })
+userRouter.post("/update_password" , userMiddleware , async(req:AuthRequest , res)=>{
+    const userId = (req as any).user?.id
+    
+   
+
+    try{
+        const parseddata = updatePasswordSchema.parse(req.body)
+        const {oldPassword , newPassword} = parseddata
+
+        const user = await prisma.user.findUnique({
+            where :{id:userId}
+        })
+        if(!user){
+            return res.status(400).json({
+                message:"user not found",
+                success:false
+            })
+        }
+        const match = await bcyrpt.compare(oldPassword , user.passwordHash)
+
+        if(!match){
+            return res.status(400).json({
+                message:"Password dosen't match",
+                success:false
+            })
+        }
+         const password = await bcyrpt.hash(newPassword , SALT_ROUNDS)
+        const updateuser = await prisma.user.update({
+            where:{id:userId},
+            data:{passwordHash: password}
+        })
+        if(!updateuser){
+            return res.status(400).json({
+                message:"Falied to update the password",
+                success:false
+            })
+        }
+        else{
+            res.status(200).json({
+                message:"password updated successfully",
+                success:true
+            })
+        }
+    }
+    catch(error:any){
+        return res.status(500).json({
+            message:"Something went wrong",
+            success:false
+        })
+    }
+} )
 export { userRouter }
