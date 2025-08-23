@@ -145,6 +145,12 @@ userRouter.get("/me", userMiddleware, async (req: AuthRequest, res) => {
 userRouter.post("/update_email", userMiddleware, async (req: AuthRequest, res) => {
     const userId = (req as any).user?.id
     const { email } = req.body
+    if (!email) {
+        return res.status(400).json({
+            message: "Please Enter all the required Fields",
+            success: false
+        })
+    }
     try {
         const updateuser = await prisma.user.update({
             where: { id: userId },
@@ -165,15 +171,13 @@ userRouter.post("/update_email", userMiddleware, async (req: AuthRequest, res) =
 
     } catch (error: any) {
         return res.status(500).json({
-            message: "Failed to update the email"
+            message: "Failed to update the email",
+            success:false
         })
     }
 })
 userRouter.post("/update_password", userMiddleware, async (req: AuthRequest, res) => {
     const userId = (req as any).user?.id
-
-
-
     try {
         const parseddata = updatePasswordSchema.parse(req.body)
         const { oldPassword, newPassword } = parseddata
@@ -227,32 +231,42 @@ userRouter.post("/update_password", userMiddleware, async (req: AuthRequest, res
         })
     }
 })
-userRouter.put("/update_basic", userMiddleware, async (req: AuthRequest, res) => {
+userRouter.put("/update", userMiddleware, async (req: AuthRequest, res) => {
 
     const userId = (req as any).user?.id
-
+    const { firstname, lastname } = req.body
+    if (!firstname || !lastname) {
+        return res.status(400).json({
+            message: "Please Enter all the required Fields",
+            success: false
+        })
+    }
     try {
+        const user = await prisma.user.update({
+            where: { id: userId },
+            data: { firstname: firstname, lastname: lastname }
+        })
+
+        if (!user) {
+            return res.status(400).json({
+                message: "Unable to update the user",
+                success: false
+            })
+        }
+        else {
+            res.status(200).json({
+                message: "updated the user details successfully",
+                success: true
+            })
+        }
 
     }
     catch (error: any) {
-        console.log(error)
+        console.log(error);
         return res.status(500).json({
             message: "Something went wrong",
             success: false
         })
     }
-
 })
-
-userRouter.post("/forgot_password", async (req: AuthRequest, res) => {
-
-    const { email } = req.body
-
-    try {
-
-    } catch (err: any) {
-        console.log(err)
-    }
-})
-
 export { userRouter }
