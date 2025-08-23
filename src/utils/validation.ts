@@ -1,7 +1,14 @@
 import { email, z } from "zod"
 
 export const registerschema = z.object({
-    name: z
+    firstname: z
+        .string()
+        .trim()
+        .min(3, "First name too short")
+        .max(20, "First name too long")
+        .regex(/^[A-Za-z]+$/, "First name should only contain letters"),
+
+        lastname: z
         .string()
         .trim()
         .min(3, "First name too short")

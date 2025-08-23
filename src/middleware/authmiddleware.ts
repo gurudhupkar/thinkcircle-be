@@ -11,7 +11,8 @@ if(!JWT_USER_SEC){
 export interface AuthRequest extends Request {
   user?: {
     id: string;
-    name: string;
+    firstname: string;
+    lastname:string;
     email: string;
   };
 }
@@ -37,7 +38,7 @@ export async function userMiddleware(req: AuthRequest, res: Response, next: Next
 
     const user = await prisma.user.findUnique({
       where: { id: decoded.id },
-      select: { id: true, name: true, email: true }
+      select: { id: true, firstname: true, lastname:true, email: true }
     });
 
     if (!user) {

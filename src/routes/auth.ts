@@ -23,12 +23,13 @@ userRouter.post("/register", async (req, res) => {
             success: false
         })
     }
-    const { name, email, passwordHash } = parseddatawithsuccess.data
+    const { firstname, lastname, email, passwordHash } = parseddatawithsuccess.data
     try {
         const hash = await bcyrpt.hash(passwordHash, SALT_ROUNDS)
         const user = await prisma.user.create({
             data: {
-                name,
+                firstname,
+                lastname,
                 email,
                 passwordHash: hash
             }
@@ -37,7 +38,8 @@ userRouter.post("/register", async (req, res) => {
             res.status(200).json({
                 message: "user created successfully",
                 success: true,
-                name: user.name,
+                firstname: user.firstname,
+                lastname: user.lastname,
                 email: user.email
             })
         }
@@ -85,7 +87,8 @@ userRouter.post("/login", async (req, res) => {
                 message: "User login successfully",
                 success: true,
                 token,
-                name: user.name,
+                firstname: user.firstname,
+                lastname: user.lastname,
                 email: user.email
             })
 
@@ -108,119 +111,147 @@ userRouter.post("/login", async (req, res) => {
         })
     }
 })
-userRouter.get("/me", userMiddleware , async(req:AuthRequest , res)=>{
+userRouter.get("/me", userMiddleware, async (req: AuthRequest, res) => {
     const userId = (req as any).user?.id
     // console.log(userId)
-    try{
-  const user = await prisma.user.findUnique({where:{id:userId}})
-    if(!user){
-        return res.status(400).json({
-            message:"User Not Logged In",
-            success:false
-        })
-    }
-    else{
-        res.json({
-            message:"Found the user",
-            success:true,
-            name:user.name,
-            email:user.email,
-            create:user.createdAt
-        })
-    }
-    }
-    catch(err:any){
-        return res.status(500).json({
-            message:"Something went wrong",
-            success:false
-        })
-    }
-  
-
-})
-userRouter.post("/update_email" , userMiddleware , async (req:AuthRequest , res)=>{
-    const userId = (req as any).user?.id
-   const {email} = req.body
-    try{
-        const updateuser = await prisma.user.update({
-            where:{id:userId},
-            data:{email:email}
-        })
-        if(!updateuser){
+    try {
+        const user = await prisma.user.findUnique({ where: { id: userId } })
+        if (!user) {
             return res.status(400).json({
-                message:"Failed to update the user",
-                success:false
+                message: "User Not Logged In",
+                success: false
             })
         }
-        else{
+        else {
+            res.json({
+                message: "Found the user",
+                success: true,
+                firstname: user.firstname,
+                lastname: user.lastname,
+                email: user.email,
+                create: user.createdAt
+            })
+        }
+    }
+    catch (err: any) {
+        return res.status(500).json({
+            message: "Something went wrong",
+            success: false
+        })
+    }
+
+
+})
+userRouter.post("/update_email", userMiddleware, async (req: AuthRequest, res) => {
+    const userId = (req as any).user?.id
+    const { email } = req.body
+    try {
+        const updateuser = await prisma.user.update({
+            where: { id: userId },
+            data: { email: email }
+        })
+        if (!updateuser) {
+            return res.status(400).json({
+                message: "Failed to update the user",
+                success: false
+            })
+        }
+        else {
             res.status(200).json({
-                message:"Email updated successfully",
-                success:true
+                message: "Email updated successfully",
+                success: true
             })
         }
 
-    }catch(error:any){
+    } catch (error: any) {
         return res.status(500).json({
-            message:"Failed to update the email"
+            message: "Failed to update the email"
         })
     }
 })
-userRouter.post("/update_password" , userMiddleware , async(req:AuthRequest , res)=>{
+userRouter.post("/update_password", userMiddleware, async (req: AuthRequest, res) => {
     const userId = (req as any).user?.id
-    
-   
 
-    try{
+
+
+    try {
         const parseddata = updatePasswordSchema.parse(req.body)
-        const {oldPassword , newPassword} = parseddata
+        const { oldPassword, newPassword } = parseddata
 
-        if(oldPassword == newPassword){
+        if (oldPassword == newPassword) {
             return res.status(401).json({
-                message:"New password and old password are same... Please Set a new password",
-                success:false
+                message: "New password and old password are same... Please Set a new password",
+                success: false
             })
         }
 
         const user = await prisma.user.findUnique({
-            where :{id:userId}
+            where: { id: userId }
         })
-        if(!user){
+        if (!user) {
             return res.status(400).json({
-                message:"user not found",
-                success:false
+                message: "user not found",
+                success: false
             })
         }
-        const match = await bcyrpt.compare(oldPassword , user.passwordHash)
+        const match = await bcyrpt.compare(oldPassword, user.passwordHash)
 
-        if(!match){
+        if (!match) {
             return res.status(400).json({
-                message:"Please Enter the correct previous password",
-                success:false
+                message: "Please Enter the correct previous password",
+                success: false
             })
         }
-         const password = await bcyrpt.hash(newPassword , SALT_ROUNDS)
+        const password = await bcyrpt.hash(newPassword, SALT_ROUNDS)
         const updateuser = await prisma.user.update({
-            where:{id:userId},
-            data:{passwordHash: password}
+            where: { id: userId },
+            data: { passwordHash: password }
         })
-        if(!updateuser){
+        if (!updateuser) {
             return res.status(400).json({
-                message:"Falied to update the password",
-                success:false
+                message: "Falied to update the password",
+                success: false
             })
         }
-        else{
+        else {
             res.status(200).json({
-                message:"password updated successfully",
-                success:true
+                message: "password updated successfully",
+                success: true
             })
         }
     }
-    catch(error:any){
+    catch (error: any) {
         return res.status(500).json({
-            message:"Something went wrong",
-            success:false
+            message: "Something went wrong",
+            success: false
         })
+    }
+})
+userRouter.put("/update_basic", userMiddleware, async (req: AuthRequest, res) => {
+
+    const userId = (req as any).user?.id
+
+    try {
+
+    }
+    catch (error: any) {
+        console.log(error)
+        return res.status(500).json({
+            message: "Something went wrong",
+            success: false
+        })
+    }
+
+})
+
+userRouter.post("/forgot_password", async (req: AuthRequest, res) => {
+
+    const { email } = req.body
+
+    try {
+
+    } catch (err: any) {
+        console.log(err)
     }
 })
 
