@@ -222,5 +222,6 @@ userRouter.post("/update_password" , userMiddleware , async(req:AuthRequest , re
             success:false
         })
     }
-} )
+})
+
 export { userRouter }
