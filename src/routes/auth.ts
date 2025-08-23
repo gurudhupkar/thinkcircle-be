@@ -174,6 +174,13 @@ userRouter.post("/update_password" , userMiddleware , async(req:AuthRequest , re
         const parseddata = updatePasswordSchema.parse(req.body)
         const {oldPassword , newPassword} = parseddata
 
+        if(oldPassword == newPassword){
+            return res.status(401).json({
+                message:"New password and old password are same... Please Set a new password",
+                success:false
+            })
+        }
+
         const user = await prisma.user.findUnique({
             where :{id:userId}
         })
@@ -187,7 +194,7 @@ userRouter.post("/update_password" , userMiddleware , async(req:AuthRequest , re
 
         if(!match){
             return res.status(400).json({
-                message:"Password dosen't match",
+                message:"Please Enter the correct previous password",
                 success:false
             })
         }
