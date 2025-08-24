@@ -8,14 +8,16 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(uuid())
-  firstname    String
-  lastname     String
-  email        String   @unique
-  passwordHash String
-  profile      Profile?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id               String   @id @default(uuid())
+  firstname        String
+  lastname         String
+  email            String   @unique
+  passwordHash     String
+  profile          Profile?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  resettoken       String?
+  resettokenExpiry DateTime? 
 }
 
 model Profile {

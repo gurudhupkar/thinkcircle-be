@@ -8,6 +8,8 @@ import { email, success, tuple } from "zod";
 import jwt from "jsonwebtoken"
 import { AuthRequest, userMiddleware } from "../middleware/authmiddleware";
 import { create } from "domain";
+import crypto from "crypto"
+import { sendPasswordResetLink } from "../utils/sendemail";
 const userRouter: Router = Router();
 const JWT_USER_SEC = process.env.SECRET_KEY || ""
 const prisma = new PrismaClient();
@@ -172,7 +174,7 @@ userRouter.post("/update_email", userMiddleware, async (req: AuthRequest, res) =
     } catch (error: any) {
         return res.status(500).json({
             message: "Failed to update the email",
-            success:false
+            success: false
         })
     }
 })
@@ -263,6 +265,46 @@ userRouter.put("/update", userMiddleware, async (req: AuthRequest, res) => {
     }
     catch (error: any) {
         console.log(error);
+        return res.status(500).json({
+            message: "Something went wrong",
+            success: false
+        })
+    }
+})
+userRouter.post("/forgot_password", async (req: AuthRequest, res) => {
+    const { email } = req.body;
+    try {
+        const user = await prisma.user.findUnique({
+            where: {
+                email: email
+            }
+        })
+        if (!user) {
+            return res.status(400).json({
+                message: "User not found or email does not exists",
+                success: false
+            })
+        }
+        const token = crypto.randomBytes(32).toString("hex")
+        const expiry = new Date(Date.now() + 10 * 60 * 1000)
+
+        const updateuser = await prisma.user.update({
+            where: { email },
+            data: {
+                resettoken: token,
+                resettokenExpiry: expiry
+            }
+        })
+        await sendPasswordResetLink(email, token)
+        res.status(200).json({
+            message: "Link sent to your email",
+            success: true
+
+        })
+
+
+    }
+    catch (error: any) {
         return res.status(500).json({
             message: "Something went wrong",
             success: false
