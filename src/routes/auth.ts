@@ -11,6 +11,7 @@ import { create } from "domain";
 import crypto from "crypto"
 import { sendPasswordResetLink } from "../utils/sendemail";
 import { fa } from "zod/v4/locales/index.cjs";
+import { upload } from "../middleware/upload";
 const userRouter: Router = Router();
 const JWT_USER_SEC = process.env.SECRET_KEY || ""
 const prisma = new PrismaClient();
@@ -375,6 +376,47 @@ userRouter.post("/reset_password/:token", async (req: AuthRequest, res) => {
         return res.status(500).json({
             message: "Something went wrong",
             success: false
+        })
+    }
+})
+userRouter.post("/update_profile", userMiddleware , upload.single("profilepic"), async (req:AuthRequest ,res)=>{
+    try{
+        const userId = (req as any).user.id
+
+        if(!req.file){
+            return res.status(400).json({
+                messsage:"Please upload the file",
+                success:false
+            })
+        }
+         const filename = req.file?.filename
+        const imageUrl = `${req.protocol}://${req.get('host')}/uploads/${filename}`;
+
+        const updateuser = await prisma.user.update({
+            where:{id:userId},
+            data:{
+                profilepic:imageUrl
+            }
+        })
+           if (!updateuser) {
+            return res.status(400).json({
+                message: "Failed to update the profile",
+                success: false
+            })
+        }
+        else {
+            res.status(200).json({
+                message: "Profile photo updated",
+                success: true,
+                user: updateuser
+            })
+        }
+    
+    }
+    catch(error:any){
+        return res.status(500).json({
+            message:"Something went wrong",
+            success:false
         })
     }
 })
