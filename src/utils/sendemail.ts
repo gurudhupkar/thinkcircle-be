@@ -10,17 +10,6 @@ const transporter = nodemailer.createTransport({
     pass: process.env.MAIL_PASS
   }
 })
-
-// export async function sendOtpEmail(to: string, otp: string) {
-//   const mailOptions = {
-//     from: `"Brainly" ${process.env.MAIL_USER}`,
-//     to,
-//     subject: "Your OTP for password reset",
-//     html: `<p>Your OTP is: <b>${otp}</b>. It will expire in 10 minutes.</p>`
-//   }
-//   await transporter.sendMail(mailOptions)
-// }
-
 export async function sendPasswordResetLink(to: string, token: string) {
   const resetUrl = `http://localhost:3001/reset-password/${token}`
 
