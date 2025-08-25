@@ -3,7 +3,8 @@ import { userRouter } from "./routes/auth";
 import * as dotenv from 'dotenv'
 import { PrismaClient } from "@prisma/client";
 import { rateLimit } from 'express-rate-limit'
-
+import path from "path";
+import cors from "cors"
 dotenv.config()
 
 const app = express();
@@ -21,6 +22,10 @@ const limiter = rateLimit({
 
 });
 app.use(limiter);
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+const uploadPath = path.resolve(__dirname, "../uploads");
+app.use("/uploads", express.static(uploadPath));
+app.use(cors())
 const port = process.env.PORT || 3001
 const prisma = new PrismaClient();
 const serverStartTime = Date.now();
