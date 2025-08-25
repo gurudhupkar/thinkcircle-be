@@ -2,11 +2,25 @@ import express from "express"
 import { userRouter } from "./routes/auth";
 import * as dotenv from 'dotenv'
 import { PrismaClient } from "@prisma/client";
+import { rateLimit } from 'express-rate-limit'
+
 dotenv.config()
 
 const app = express();
 app.use(express.json())
+const limiter = rateLimit({
+    windowMs: process.env.RATE_LIMIT_WINDOW_MS
+        ? Number(process.env.RATE_LIMIT_WINDOW_MS)
+        : 60 * 1000,
+    max: process.env.RATE_LIMIT_MAX_REQUESTS
+        ? Number(process.env.RATE_LIMIT_MAX_REQUESTS)
+        : 30,
+    validate: true,
+    legacyHeaders: true,
 
+
+});
+app.use(limiter);
 const port = process.env.PORT || 3001
 const prisma = new PrismaClient();
 const serverStartTime = Date.now();
