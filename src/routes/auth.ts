@@ -3,13 +3,14 @@ import bcyrpt from "bcrypt"
 import { Router } from "express"
 import { loginschema, registerschema, updatePasswordSchema } from "../utils/validation";
 import { PrismaClient } from "@prisma/client"
-import { error } from "console";
+import { error, profile } from "console";
 import { email, success, tuple } from "zod";
 import jwt from "jsonwebtoken"
 import { AuthRequest, userMiddleware } from "../middleware/authmiddleware";
 import { create } from "domain";
 import crypto from "crypto"
 import { sendPasswordResetLink } from "../utils/sendemail";
+import { fa } from "zod/v4/locales/index.cjs";
 const userRouter: Router = Router();
 const JWT_USER_SEC = process.env.SECRET_KEY || ""
 const prisma = new PrismaClient();
@@ -302,6 +303,72 @@ userRouter.post("/forgot_password", async (req: AuthRequest, res) => {
 
         })
 
+
+    }
+    catch (error: any) {
+        return res.status(500).json({
+            message: "Something went wrong",
+            success: false
+        })
+    }
+})
+userRouter.post("/reset_password/:token", async (req: AuthRequest, res) => {
+    const { token } = req.params
+    // console.log(token)
+    const { confirmPassword, newPassword } = req.body
+    if (!confirmPassword || !newPassword) {
+        return res.status(400).json({
+            message: "Please enter all the required fields",
+            success: false
+        })
+    }
+    if (confirmPassword != newPassword) {
+        return res.status(400).json({
+            message: "password fields should match",
+            success: false
+        })
+    }
+    try {
+        const user = await prisma.user.findFirst({
+            where: {
+                resettoken: token,
+                resettokenExpiry: { gt: new Date() }
+            }
+        })
+        if (user?.resettoken !== token || user?.resettokenExpiry! < new Date()) {
+            return res.status(404).json({
+                message: "Invalid token or token has expired",
+                success: false
+            })
+        }
+        if (!user) {
+            return res.status(400).json({
+                message: "Invalid token or token has expired",
+                success: false
+            })
+        }
+        const hash = await bcyrpt.hash(newPassword, SALT_ROUNDS)
+
+        const updateuser = await prisma.user.update({
+            where:{id:user?.id},
+            data:{
+                passwordHash:hash,
+                resettoken:null,
+                resettokenExpiry:null
+            }
+        })
+        if(!updateuser){
+            return res.status(400).json({
+                message:"Failed to update the password",
+                success:false
+            })
+        }
+        else{
+            res.status(200).json({
+                message:"password updated successfully",
+                success:true
+            })
+        }
 
     }
     catch (error: any) {

@@ -25,7 +25,7 @@ export async function sendPasswordResetLink(to: string, token: string) {
   const resetUrl = `http://localhost:3001/reset-password/${token}`
 
   const mailOptions = {
-    from: `"Brainly" <${process.env.MAIL_USER}>`,
+    from: `"Thinkcircle" <${process.env.MAIL_USER}>`,
     to,
     subject: "Reset your password",
     html: `
