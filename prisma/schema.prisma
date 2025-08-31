@@ -8,29 +8,61 @@ datasource db {
 }
 
 model User {
-  id               String   @id @default(uuid())
+  id               String    @id @default(uuid())
   firstname        String
   lastname         String
-  email            String   @unique
+  email            String    @unique
   passwordHash     String
   profile          Profile?
   profilepic       String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
   resettoken       String?
-  resettokenExpiry DateTime? 
+  resettokenExpiry DateTime?
+  messages         Message[] @relation("UserMessages")
 }
 
 model Profile {
   id            String   @id @default(uuid())
   user          User     @relation(fields: [userId], references: [id])
   userId        String   @unique
-  subjects      String[]
+  subjects      String[] // Array of subjects
   learningStyle String
-  availability  String[]
+  availability  String[] // e.g. ["Mon 5-7pm", "Wed 2-4pm"]
   goals         String
-  // group         Group?   @relation(fields: [groupId], references: [id])
+  group         Group?   @relation(fields: [groupId], references: [id])
   groupId       String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+}
+
+model Group {
+  id           String    @id @default(uuid())
+  name         String
+  subjectFocus String
+  members      Profile[]
+  createdByAI  Boolean   @default(true)
+  messages     Message[]
+  summaries    Summary[]
+  createdAt    DateTime  @default(now())
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  group     Group    @relation(fields: [groupId], references: [id])
+  groupId   String
+  sender    User     @relation("UserMessages", fields: [senderId], references: [id])
+  senderId  String
+  message   String
+  createdAt DateTime @default(now())
+}
+
+model Summary {
+  id            String   @id @default(uuid())
+  group         Group    @relation(fields: [groupId], references: [id])
+  groupId       String
+  topicsCovered String[]
+  keyQuestions  String[]
+  actionItems   String[]
+  createdAt     DateTime @default(now())
 }
