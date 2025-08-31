@@ -22,6 +22,7 @@ const SALT_ROUNDS = 10
 userRouter.post("/register", async (req, res) => {
     const parseddatawithsuccess = registerschema.safeParse(req.body)
     if (!parseddatawithsuccess.success) {
+        console.log(parseddatawithsuccess)
         return res.status(400).json({
             message: "Please enter all valid fields",
             success: false
