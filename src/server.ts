@@ -5,6 +5,7 @@ import { PrismaClient } from "@prisma/client";
 import { rateLimit } from 'express-rate-limit'
 import path from "path";
 import cors from "cors"
+import { profilerouter } from "./routes/profile";
 dotenv.config()
 
 const app = express();
@@ -53,6 +54,7 @@ const connectDB = async () => {
 };
 connectDB();
 app.use("/api/v1/user", userRouter)
+app.use("/api/v1/profile" , profilerouter)
 app.listen(port, () => {
     console.log(`Server is running on ${port}`)
 })

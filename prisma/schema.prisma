@@ -26,9 +26,9 @@ model Profile {
   id            String   @id @default(uuid())
   user          User     @relation(fields: [userId], references: [id])
   userId        String   @unique
-  subjects      String[] // Array of subjects
+  subjects      String[] 
   learningStyle String
-  availability  String[] // e.g. ["Mon 5-7pm", "Wed 2-4pm"]
+  availability  String[]
   goals         String
   group         Group?   @relation(fields: [groupId], references: [id])
   groupId       String?
