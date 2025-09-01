@@ -14,11 +14,11 @@ profilerouter.post("/create_profile" , userMiddleware , async (req :AuthRequest 
     try {
         const userId = (req as any).user.id
         const parsedata = profileSchema.safeParse(req.body)
-        console.log(req.body);
+        // console.log(req.body);
         
 
        if (!parsedata.success){
-        console.log(parsedata)
+        // console.log(parsedata)
         return res.status(400).json({
             message:"Please enter all the valid fields",
             success:false
@@ -26,14 +26,21 @@ profilerouter.post("/create_profile" , userMiddleware , async (req :AuthRequest 
        }
       const { subjects, learningStyle, availability, goals } = parsedata.data;
 
-      const profile = await prisma.profile.update({
-        where:{id:userId},
-        data:{
-            subjects,
-            learningStyle,
-            availability,
-            goals
-        }
+      const profile = await prisma.profile.upsert({
+       where:{userId},
+       update:{
+        subjects,
+        learningStyle,
+        availability,
+        goals
+       },
+       create:{
+        userId,
+        subjects,
+        learningStyle,
+        availability,
+        goals
+       }
       })
       if(!profile){
         return res.status(400).json({
@@ -50,7 +57,9 @@ profilerouter.post("/create_profile" , userMiddleware , async (req :AuthRequest 
 
     }
     catch(error:any){
+             console.log(error)
         return res.status(500).json({
+       
             message:"Something went wrong",
             success:false
         })
