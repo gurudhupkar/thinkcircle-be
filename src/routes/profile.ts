@@ -65,6 +65,36 @@ profilerouter.post("/create_profile" , userMiddleware , async (req :AuthRequest 
         })
     }
 })
+profilerouter.get("/my_profile" , userMiddleware , async(req:AuthRequest ,res)=>{
+    const userId = (req as any).user.id
+    // console.log(userId)
+    try{
+        const user = await prisma.profile.findUnique({
+            where:{userId:userId},
+             include: { user: true }
+        })
+        // console.log(user)
+        if(!user){
+            return res.status(400).json({
+                message:"profile not found or created",
+                success:false
+            })
+        }
+        else{
+            res.status(200).json({
+                message:"Profile found successfully",
+                success:true,
+                user
+            })
+        }
+    }
+    catch(error:any){
+        return res.status(500).json({
+            message:"something went wrong",
+            success:false
+        })
+    }
+})
 
 
 
