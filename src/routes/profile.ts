@@ -5,6 +5,7 @@ import { AuthRequest, userMiddleware } from "../middleware/authmiddleware";
 import { Router } from "express"
 import { success } from "zod";
 import { profileSchema } from "../utils/validation";
+import tr from "zod/v4/locales/tr.cjs";
 
 
 const profilerouter: Router = Router();
@@ -140,7 +141,47 @@ profilerouter.post("/update", userMiddleware, async (req: AuthRequest, res) => {
     }
 
 })
+profilerouter.get("/subject_specific" , userMiddleware , async(req:AuthRequest ,res)=>{
 
+    const userId = (req as any).user.id
+    const {subject} = req.body
+    try{
+
+        const user = await prisma.profile.findMany({
+        where:{
+            subjects:{
+                has:subject
+            }
+        },
+        select:{
+            id:true,
+            subjects:true,
+            groupId:true,
+            userId:true
+        }
+        })
+        if(!user){
+            return res.status(400).json({
+                message:"No user with such specific subject",
+                success:false
+            })
+        }
+        else{
+            res.status(200).json({
+                message:"User found with the specific subject",
+                success:true,
+                user
+            })
+        }
+    }
+    catch(error:any){
+        console.log(error)
+        return res.status(500).json({
+            message:"Something went wrong",
+            success:false
+        })
+    }
+})
 
 
 

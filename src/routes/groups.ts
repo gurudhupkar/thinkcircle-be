@@ -18,7 +18,6 @@ grouprouter.post("/form_group" , async (req:AuthRequest ,res)=>{
     res.status(500).json({ error: "Failed to form groups" });
   }
 })
-
 grouprouter.get("/groups" , async (req:AuthRequest ,res)=>{
     try{
         const findgroups = await prisma.group.findMany({
