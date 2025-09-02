@@ -6,6 +6,7 @@ import { rateLimit } from 'express-rate-limit'
 import path from "path";
 import cors from "cors"
 import { profilerouter } from "./routes/profile";
+import { grouprouter } from "./routes/groups";
 dotenv.config()
 
 const app = express();
@@ -55,6 +56,7 @@ const connectDB = async () => {
 connectDB();
 app.use("/api/v1/user", userRouter)
 app.use("/api/v1/profile" , profilerouter)
+app.use("/api/v1/group" , grouprouter)
 app.listen(port, () => {
     console.log(`Server is running on ${port}`)
 })
