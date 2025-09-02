@@ -7,93 +7,138 @@ import { success } from "zod";
 import { profileSchema } from "../utils/validation";
 
 
-const profilerouter :Router = Router();
+const profilerouter: Router = Router();
 const prisma = new PrismaClient();
 
-profilerouter.post("/create_profile" , userMiddleware , async (req :AuthRequest , res)=>{
+profilerouter.post("/create_profile", userMiddleware, async (req: AuthRequest, res) => {
     try {
         const userId = (req as any).user.id
         const parsedata = profileSchema.safeParse(req.body)
         // console.log(req.body);
-        
 
-       if (!parsedata.success){
-        // console.log(parsedata)
-        return res.status(400).json({
-            message:"Please enter all the valid fields",
-            success:false
-        })
-       }
-      const { subjects, learningStyle, availability, goals } = parsedata.data;
 
-      const profile = await prisma.profile.upsert({
-       where:{userId},
-       update:{
-        subjects,
-        learningStyle,
-        availability,
-        goals
-       },
-       create:{
-        userId,
-        subjects,
-        learningStyle,
-        availability,
-        goals
-       }
-      })
-      if(!profile){
-        return res.status(400).json({
-            message:"Unable to create profile",
-            success:false
+        if (!parsedata.success) {
+            // console.log(parsedata)
+            return res.status(400).json({
+                message: "Please enter all the valid fields",
+                success: false
+            })
+        }
+        const { subjects, learningStyle, availability, goals } = parsedata.data;
+
+        const profile = await prisma.profile.upsert({
+            where: { userId },
+            update: {
+                subjects,
+                learningStyle,
+                availability,
+                goals
+            },
+            create: {
+                userId,
+                subjects,
+                learningStyle,
+                availability,
+                goals
+            }
         })
-      }
-      else{
-        res.status(200).json({
-            message:"Profile has been created",
-            success:true
-        })
-      }
+        if (!profile) {
+            return res.status(400).json({
+                message: "Unable to create profile",
+                success: false
+            })
+        }
+        else {
+            res.status(200).json({
+                message: "Profile has been created",
+                success: true
+            })
+        }
 
     }
-    catch(error:any){
-             console.log(error)
+    catch (error: any) {
+        console.log(error)
         return res.status(500).json({
-       
-            message:"Something went wrong",
-            success:false
+
+            message: "Something went wrong",
+            success: false
         })
     }
 })
-profilerouter.get("/my_profile" , userMiddleware , async(req:AuthRequest ,res)=>{
+profilerouter.get("/my_profile", userMiddleware, async (req: AuthRequest, res) => {
     const userId = (req as any).user.id
     // console.log(userId)
-    try{
+    try {
         const user = await prisma.profile.findUnique({
-            where:{userId:userId},
-             include: { user: true }
+            where: { userId: userId },
+            include: { user: true }
         })
         // console.log(user)
-        if(!user){
+        if (!user) {
             return res.status(400).json({
-                message:"profile not found or created",
+                message: "profile not found or created",
+                success: false
+            })
+        }
+        else {
+            res.status(200).json({
+                message: "Profile found successfully",
+                success: true,
+                user
+            })
+        }
+    }
+    catch (error: any) {
+        return res.status(500).json({
+            message: "something went wrong",
+            success: false
+        })
+    }
+})
+profilerouter.post("/update", userMiddleware, async (req: AuthRequest, res) => {
+ const userId = (req as any).user.id
+    const pasreddata = profileSchema.safeParse(req.body)
+    if (!pasreddata.success) {
+        return res.status(400).json({
+            message: "Please enter all the valid fields",
+            success: false
+        })
+    }
+        const { subjects, learningStyle, availability, goals } = pasreddata.data;
+
+    try {
+       
+        const updateprofile = await prisma.profile.update({
+            where:{userId:userId},
+            data:{
+                subjects,
+                learningStyle,
+                availability,
+                goals
+            }
+        })
+        if(!updateprofile){
+            return res.status(400).json({
+                message:"Unable to  update your profile",
                 success:false
             })
         }
         else{
             res.status(200).json({
-                message:"Profile found successfully",
-                success:true,
-                user
+                message:"Updated your profile",
+                success:true
             })
         }
+
     }
-    catch(error:any){
+    catch (error: any) {
+        console.log(error)
         return res.status(500).json({
-            message:"something went wrong",
-            success:false
+            message: "Something went wrong",
+            success: false
         })
     }
+
 })
 
 
@@ -101,5 +146,4 @@ profilerouter.get("/my_profile" , userMiddleware , async(req:AuthRequest ,res)=>
 
 
 
-
-export {profilerouter}
+export { profilerouter }
