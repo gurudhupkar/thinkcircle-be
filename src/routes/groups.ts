@@ -19,5 +19,33 @@ grouprouter.post("/form_group" , async (req:AuthRequest ,res)=>{
   }
 })
 
+grouprouter.get("/groups" , async (req:AuthRequest ,res)=>{
+    try{
+        const findgroups = await prisma.group.findMany({
+            include:{members:true}
+        })
+
+        if(!findgroups){
+            return res.status(400).json({
+                message:"Unable to find the groups",
+                success:false
+            })
+        }
+        else{
+            return res.status(200).json({
+                message:"Found the groups",
+                success:true,
+                findgroups
+            })
+        }
+    }
+    catch(error:any){
+        return res.status(500).json({
+            message:"Something went wrong",
+            success:false
+        })
+    }
+})
+
 
 export {grouprouter}
