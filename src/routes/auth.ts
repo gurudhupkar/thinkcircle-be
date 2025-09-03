@@ -28,9 +28,9 @@ userRouter.post("/register", async (req, res) => {
             success: false
         })
     }
-    const { firstname, lastname, email, passwordHash } = parseddatawithsuccess.data
+    const { firstname, lastname, email, password } = parseddatawithsuccess.data
     try {
-        const hash = await bcyrpt.hash(passwordHash, SALT_ROUNDS)
+        const hash = await bcyrpt.hash(password, SALT_ROUNDS)
         const user = await prisma.user.create({
             data: {
                 firstname,

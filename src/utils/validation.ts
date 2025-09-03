@@ -22,7 +22,7 @@ export const registerschema = z.object({
     .max(50, "Email too long")
     .email("Invalid email format"),
 
-  passwordHash: z
+  password: z
     .string()
     .min(5, "Password must be at least 5 characters")
     .max(20, "Password too long")
