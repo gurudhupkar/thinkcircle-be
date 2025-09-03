@@ -97,7 +97,7 @@ profilerouter.get("/my_profile", userMiddleware, async (req: AuthRequest, res) =
     }
 })
 profilerouter.post("/update", userMiddleware, async (req: AuthRequest, res) => {
- const userId = (req as any).user.id
+    const userId = (req as any).user.id
     const pasreddata = profileSchema.safeParse(req.body)
     if (!pasreddata.success) {
         return res.status(400).json({
@@ -105,29 +105,29 @@ profilerouter.post("/update", userMiddleware, async (req: AuthRequest, res) => {
             success: false
         })
     }
-        const { subjects, learningStyle, availability, goals } = pasreddata.data;
+    const { subjects, learningStyle, availability, goals } = pasreddata.data;
 
     try {
-       
+
         const updateprofile = await prisma.profile.update({
-            where:{userId:userId},
-            data:{
+            where: { userId: userId },
+            data: {
                 subjects,
                 learningStyle,
                 availability,
                 goals
             }
         })
-        if(!updateprofile){
+        if (!updateprofile) {
             return res.status(400).json({
-                message:"Unable to  update your profile",
-                success:false
+                message: "Unable to  update your profile",
+                success: false
             })
         }
-        else{
+        else {
             res.status(200).json({
-                message:"Updated your profile",
-                success:true
+                message: "Updated your profile",
+                success: true
             })
         }
 
@@ -141,47 +141,125 @@ profilerouter.post("/update", userMiddleware, async (req: AuthRequest, res) => {
     }
 
 })
-profilerouter.get("/subject_specific" , userMiddleware , async(req:AuthRequest ,res)=>{
+profilerouter.get("/subject_specific", userMiddleware, async (req: AuthRequest, res) => {
 
     const userId = (req as any).user.id
-    const {subject} = req.body
-    try{
+    const { subject } = req.body
+    try {
 
         const user = await prisma.profile.findMany({
-        where:{
-            subjects:{
-                has:subject
+            where: {
+                subjects: {
+                    has: subject
+                }
+            },
+            select: {
+                id: true,
+                subjects: true,
+                groupId: true,
+                userId: true
             }
-        },
-        select:{
-            id:true,
-            subjects:true,
-            groupId:true,
-            userId:true
-        }
         })
-        if(!user){
+        if (!user) {
             return res.status(400).json({
-                message:"No user with such specific subject",
-                success:false
+                message: "No user with such specific subject",
+                success: false
             })
         }
-        else{
+        else {
             res.status(200).json({
-                message:"User found with the specific subject",
-                success:true,
+                message: "User found with the specific subject",
+                success: true,
                 user
             })
         }
     }
-    catch(error:any){
+    catch (error: any) {
         console.log(error)
         return res.status(500).json({
-            message:"Something went wrong",
-            success:false
+            message: "Something went wrong",
+            success: false
         })
     }
 })
+profilerouter.post("/grouping", userMiddleware, async (req: AuthRequest, res) => {
+    const userId = (req as any).user.id;
+    const { profileId, subjectfocus, groupname } = req.body;
+
+    try {
+
+        const currentuser = await prisma.profile.findUnique({
+            where: { userId: userId },
+        });
+
+        if (!currentuser) {
+            return res.status(400).json({
+                message: "User profile not found",
+                success: false,
+            });
+        }
+
+
+        const selectedProfile = await prisma.profile.findUnique({
+            where: { id: profileId },
+        });
+
+        if (!selectedProfile) {
+            return res.status(404).json({
+                message: "Selected profile not found",
+                success: false,
+            });
+        }
+        // Check for Existing group id
+        if (currentuser.groupId || selectedProfile.groupId) {
+            return res.status(400).json({
+                message: "One or both users are already in a group. Cannot form a new group.",
+                currentUserGroup: currentuser.groupId,
+                selectedUserGroup: selectedProfile.groupId,
+                success: false,
+            });
+        }
+        // Check for subject overlapping 
+        const userSubjects = currentuser.subjects;
+        const overlap = selectedProfile.subjects.some((subj) =>
+            userSubjects.includes(subj)
+        );
+
+        if (!overlap) {
+            return res.status(400).json({
+                message: "Cannot form group with a user having completely different subjects",
+                invalidProfile: selectedProfile.id,
+                success: false,
+            });
+        }
+
+
+        const group = await prisma.group.create({
+            data: {
+                name: groupname || "Custom Study Group",
+                subjectFocus: subjectfocus || "General",
+            },
+        });
+
+
+        await prisma.profile.updateMany({
+            where: { id: { in: [currentuser.id, selectedProfile.id] } },
+            data: { groupId: group.id },
+        });
+
+        return res.status(201).json({
+            message: "Group created successfully",
+            success: true,
+            group,
+        });
+    } catch (error: any) {
+        console.error(error);
+        return res.status(500).json({
+            message: "Something went wrong",
+            success: false,
+        });
+    }
+});
 
 
 
