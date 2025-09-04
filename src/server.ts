@@ -27,7 +27,20 @@ app.use(limiter);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 const uploadPath = path.resolve(__dirname, "../uploads");
 app.use("/uploads", express.static(uploadPath));
-app.use(cors())
+
+
+var corsOptions = {
+  origin: [
+    "http://localhost:3000",
+    "http://localhost:5000",
+
+    
+  ],
+  credentials: true, 
+
+  optionsSuccessStatus: 200, 
+};
+app.use(cors(corsOptions))
 const port = process.env.PORT || 3001
 const prisma = new PrismaClient();
 const serverStartTime = Date.now();
