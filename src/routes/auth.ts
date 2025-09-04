@@ -24,13 +24,13 @@ userRouter.post("/register", async (req, res) => {
     if (!parseddatawithsuccess.success) {
         console.log(parseddatawithsuccess)
         return res.status(400).json({
-            message: "Please enter all valid fields",
+            message: parseddatawithsuccess.error._zod.def[0].message ? parseddatawithsuccess.error._zod.def[0].message : "Please enter all valid fields",
             success: false
         })
     }
-    const { firstname, lastname, email, passwordHash } = parseddatawithsuccess.data
+    const { firstname, lastname, email, password } = parseddatawithsuccess.data
     try {
-        const hash = await bcyrpt.hash(passwordHash, SALT_ROUNDS)
+        const hash = await bcyrpt.hash(password, SALT_ROUNDS)
         const user = await prisma.user.create({
             data: {
                 firstname,
@@ -74,7 +74,7 @@ userRouter.post("/login", async (req, res) => {
         })
     }
     try {
-        const { email, passwordHash } = parsedbody.data
+        const { email, password } = parsedbody.data
         // console.log(passwordHash)
         const user = await prisma.user.findUnique({ where: { email } })
         if (!user) {
@@ -85,7 +85,7 @@ userRouter.post("/login", async (req, res) => {
         }
         // console.log(user.passwordHash)
 
-        const match = await bcyrpt.compare(passwordHash, (user as any).passwordHash)
+        const match = await bcyrpt.compare(password, (user as any).passwordHash)
         if (match) {
             const token = jwt.sign({ id: user.id }, JWT_USER_SEC, { expiresIn: "1h" })
             return res.status(200).json({
@@ -99,7 +99,7 @@ userRouter.post("/login", async (req, res) => {
 
         }
         else {
-            return res.status(404).json({
+            return res.status(402).json({
                 message: "Incorrect password",
                 success: false
             })
@@ -352,23 +352,23 @@ userRouter.post("/reset_password/:token", async (req: AuthRequest, res) => {
         const hash = await bcyrpt.hash(newPassword, SALT_ROUNDS)
 
         const updateuser = await prisma.user.update({
-            where:{id:user?.id},
-            data:{
-                passwordHash:hash,
-                resettoken:null,
-                resettokenExpiry:null
+            where: { id: user?.id },
+            data: {
+                passwordHash: hash,
+                resettoken: null,
+                resettokenExpiry: null
             }
         })
-        if(!updateuser){
+        if (!updateuser) {
             return res.status(400).json({
-                message:"Failed to update the password",
-                success:false
+                message: "Failed to update the password",
+                success: false
             })
         }
-        else{
+        else {
             res.status(200).json({
-                message:"password updated successfully",
-                success:true
+                message: "password updated successfully",
+                success: true
             })
         }
 
@@ -380,26 +380,26 @@ userRouter.post("/reset_password/:token", async (req: AuthRequest, res) => {
         })
     }
 })
-userRouter.post("/update_profile", userMiddleware , upload.single("profilepic"), async (req:AuthRequest ,res)=>{
-    try{
+userRouter.post("/update_profile", userMiddleware, upload.single("profilepic"), async (req: AuthRequest, res) => {
+    try {
         const userId = (req as any).user.id
 
-        if(!req.file){
+        if (!req.file) {
             return res.status(400).json({
-                messsage:"Please upload the file",
-                success:false
+                messsage: "Please upload the file",
+                success: false
             })
         }
-         const filename = req.file?.filename
+        const filename = req.file?.filename
         const imageUrl = `${req.protocol}://${req.get('host')}/uploads/${filename}`;
 
         const updateuser = await prisma.user.update({
-            where:{id:userId},
-            data:{
-                profilepic:imageUrl
+            where: { id: userId },
+            data: {
+                profilepic: imageUrl
             }
         })
-           if (!updateuser) {
+        if (!updateuser) {
             return res.status(400).json({
                 message: "Failed to update the profile",
                 success: false
@@ -412,12 +412,12 @@ userRouter.post("/update_profile", userMiddleware , upload.single("profilepic"),
                 user: updateuser
             })
         }
-    
+
     }
-    catch(error:any){
+    catch (error: any) {
         return res.status(500).json({
-            message:"Something went wrong",
-            success:false
+            message: "Something went wrong",
+            success: false
         })
     }
 })
