@@ -74,12 +74,13 @@ userRouter.post("/login", async (req, res) => {
         })
     }
     try {
-        const { email, password } = parsedbody.data
+        const { email } = parsedbody.data
+        const password = req.body.password
         // console.log(passwordHash)
         const user = await prisma.user.findUnique({ where: { email } })
         if (!user) {
             return res.status(404).json({
-                message: "Email does not exits ",
+                message: "Email does not exists ",
                 success: false
             })
         }
