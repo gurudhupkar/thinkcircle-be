@@ -20,6 +20,7 @@ model User {
   resettoken       String?
   resettokenExpiry DateTime?
   messages         Message[] @relation("UserMessages")
+  onboarding       Boolean @default(false)
 }
 
 model Profile {
