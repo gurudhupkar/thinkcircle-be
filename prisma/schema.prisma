@@ -7,45 +7,100 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  ADMIN
+  MEMBER
+  MODERATOR
+}
+
+enum RequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+enum NotificationType {
+  JOIN_REQUEST
+  MESSAGE
+  SYSTEM
+}
+
 model User {
-  id               String    @id @default(uuid())
+  id               String          @id @default(uuid())
   firstname        String
   lastname         String
-  email            String    @unique
+  email            String          @unique
   passwordHash     String
   profile          Profile?
   profilepic       String?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
   resettoken       String?
   resettokenExpiry DateTime?
-  messages         Message[] @relation("UserMessages")
   onboarding       Boolean @default(false)
+
+  // Relations
+  messages       Message[]       @relation("UserMessages")
+  notifications  Notification[]
+  groupsAdmin    Group[]         @relation("GroupAdmin") // groups this user is admin of
 }
 
 model Profile {
-  id            String   @id @default(uuid())
-  user          User     @relation(fields: [userId], references: [id])
-  userId        String   @unique
-  subjects      String[] 
+  id            String           @id @default(uuid())
+  user          User             @relation(fields: [userId], references: [id])
+  userId        String           @unique
+  subjects      String[]
   learningStyle String
   availability  String[]
   goals         String
-  group         Group?   @relation(fields: [groupId], references: [id])
-  groupId       String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  // Relations
+  memberships   GroupMember[]
+  joinRequests  GroupJoinRequest[]
 }
 
 model Group {
-  id           String    @id @default(uuid())
-  name         String
-  subjectFocus String
-  members      Profile[]
-  createdByAI  Boolean   @default(true)
-  messages     Message[]
-  summaries    Summary[]
-  createdAt    DateTime  @default(now())
+  id            String            @id @default(uuid())
+  name          String
+  subjectFocus  String
+  createdByAI   Boolean           @default(true)
+  maxSize       Int               @default(10)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  // Relations
+  members       GroupMember[]
+  messages      Message[]
+  summaries     Summary[]
+  admin         User              @relation("GroupAdmin", fields: [adminId], references: [id])
+  adminId       String
+  joinRequests  GroupJoinRequest[]
+}
+
+model GroupMember {
+  id        String   @id @default(uuid())
+  group     Group    @relation(fields: [groupId], references: [id])
+  groupId   String
+  profile   Profile  @relation(fields: [profileId], references: [id])
+  profileId String
+  role      Role     @default(MEMBER)
+  joinedAt  DateTime @default(now())
+
+  @@unique([groupId, profileId])
+}
+
+model GroupJoinRequest {
+  id        String        @id @default(uuid())
+  group     Group         @relation(fields: [groupId], references: [id])
+  groupId   String
+  profile   Profile       @relation(fields: [profileId], references: [id])
+  profileId String
+  status    RequestStatus @default(PENDING)
+  createdAt DateTime      @default(now())
+
+  @@unique([groupId, profileId])
 }
 
 model Message {
@@ -66,4 +121,14 @@ model Summary {
   keyQuestions  String[]
   actionItems   String[]
   createdAt     DateTime @default(now())
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  user      User             @relation(fields: [userId], references: [id])
+  userId    String
+  type      NotificationType
+  content   String
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
 }
