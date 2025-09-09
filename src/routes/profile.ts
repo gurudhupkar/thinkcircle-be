@@ -43,6 +43,15 @@ profilerouter.post("/create_profile", userMiddleware, async (req: AuthRequest, r
                 goals
             }
         })
+
+        const user = await prisma.user.update({
+            where: { id: userId },
+            data: {
+                onboarding: true
+            }
+
+        })
+        const { passwordHash, ...safeUser } = user
         if (!profile) {
             return res.status(400).json({
                 message: "Unable to create profile",
@@ -52,7 +61,8 @@ profilerouter.post("/create_profile", userMiddleware, async (req: AuthRequest, r
         else {
             res.status(200).json({
                 message: "Profile has been created",
-                success: true
+                success: true,
+                user
             })
         }
 
