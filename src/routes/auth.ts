@@ -88,14 +88,13 @@ userRouter.post("/login", async (req, res) => {
 
         const match = await bcyrpt.compare(password, (user as any).passwordHash)
         if (match) {
+            const { passwordHash, ...safeUser } = user
             const token = jwt.sign({ id: user.id }, JWT_USER_SEC, { expiresIn: "1h" })
             return res.status(200).json({
                 message: "User login successfully",
                 success: true,
                 token,
-                firstname: user.firstname,
-                lastname: user.lastname,
-                email: user.email
+                user: safeUser
             })
 
         }
@@ -123,19 +122,22 @@ userRouter.get("/me", userMiddleware, async (req: AuthRequest, res) => {
     try {
         const user = await prisma.user.findUnique({ where: { id: userId } })
         if (!user) {
-            return res.status(400).json({
+            return res.status(403).json({
                 message: "User Not Logged In",
                 success: false
             })
         }
-        else {
+        else if (user) {
+            const { passwordHash, ...safeUser } = user
             res.json({
                 message: "Found the user",
                 success: true,
-                firstname: user.firstname,
-                lastname: user.lastname,
-                email: user.email,
-                create: user.createdAt
+                user: safeUser
+            })
+        } else {
+            return res.status(403).json({
+                message: "User Not Logged In",
+                success: false
             })
         }
     }
