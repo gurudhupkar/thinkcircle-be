@@ -82,7 +82,17 @@ profilerouter.get(
     try {
       const user = await prisma.profile.findUnique({
         where: { userId: userId },
-        include: { user: true },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              firstname: true,
+              onboarding: true,
+              lastname: true,
+            },
+          },
+        },
       });
       // console.log(user)
       if (!user) {
