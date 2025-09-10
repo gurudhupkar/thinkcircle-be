@@ -39,10 +39,10 @@ model User {
   resettokenExpiry DateTime?
   onboarding       Boolean @default(false)
 
-  // Relations
+
   messages       Message[]       @relation("UserMessages")
   notifications  Notification[]
-  groupsAdmin    Group[]         @relation("GroupAdmin") // groups this user is admin of
+  groupsAdmin    Group[]         @relation("GroupAdmin") 
 }
 
 model Profile {
@@ -56,7 +56,7 @@ model Profile {
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 
-  // Relations
+
   memberships   GroupMember[]
   joinRequests  GroupJoinRequest[]
 }
@@ -70,7 +70,7 @@ model Group {
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 
-  // Relations
+
   members       GroupMember[]
   messages      Message[]
   summaries     Summary[]
