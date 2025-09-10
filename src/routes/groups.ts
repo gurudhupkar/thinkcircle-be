@@ -160,5 +160,43 @@ grouprouter.post("/join/:id", userMiddleware, async (req: AuthRequest, res) => {
     });
   }
 });
+grouprouter.get(
+  "/join-request/:groupId",
+  userMiddleware,
+  async (req: AuthRequest, res) => {
+    const userId = (req as any).user?.id;
+    // console.log(userId);
+    const groupId = req.params.groupId;
+    // console.log(groupId);
 
+    try {
+      const group = await prisma.group.findUnique({
+        where: { id: groupId },
+        select: { adminId: true },
+      });
+      // console.log(group?.adminId);
+
+      if (!group || group.adminId !== userId) {
+        return res.status(403).json({
+          message: "You are not allowed to view the requset",
+          success: false,
+        });
+      }
+      const request = await prisma.groupJoinRequest.findMany({
+        where: { groupId },
+        select: { profile: true, status: true },
+      });
+      res.status(200).json({
+        success: true,
+        request,
+      });
+    } catch (error: any) {
+      console.log(error);
+      return res.status(500).json({
+        success: false,
+        message: "Something went wrong",
+      });
+    }
+  }
+);
 export { grouprouter };
