@@ -6,6 +6,7 @@ import { Router } from "express";
 // import { formGroups } from "../utils/Formation";
 import { success } from "zod";
 import { connect } from "http2";
+import { error } from "console";
 const prisma = new PrismaClient();
 
 const grouprouter: Router = Router();
@@ -195,6 +196,113 @@ grouprouter.get(
       return res.status(500).json({
         success: false,
         message: "Something went wrong",
+      });
+    }
+  }
+);
+
+grouprouter.post(
+  "/:groupId/join-request/:requestId",
+  userMiddleware,
+  async (req: AuthRequest, res) => {
+    const userId = (req as any).user.id;
+    const { groupId, requestId } = req.params;
+    const { action } = req.body;
+
+    try {
+      const group = await prisma.group.findUnique({
+        where: { id: groupId },
+        select: {
+          adminId: true,
+          maxSize: true,
+        },
+      });
+      if (!group || group.adminId !== userId) {
+        return res.status(403).json({
+          message: "you are not allowed to manage this groups requests",
+          success: false,
+        });
+      }
+      const joinrequest = await prisma.groupJoinRequest.findUnique({
+        where: { id: requestId },
+      });
+      if (!joinrequest || joinrequest.groupId !== groupId) {
+        return res.status(403).json({
+          message: "Request Does not exits",
+          success: false,
+        });
+      }
+      if (action === "ACCEPTED") {
+        await prisma.$transaction(async (tx) => {
+          const membercount = await tx.groupMember.count({
+            where: { groupId },
+          });
+          if (membercount >= group.maxSize) {
+            throw new Error("Member Limit exceed");
+          }
+          await tx.groupMember.create({
+            data: {
+              groupId,
+              profileId: joinrequest.profileId,
+              role: Role.MEMBER,
+            },
+          });
+          await tx.groupJoinRequest.delete({
+            where: { id: requestId },
+          });
+
+          const profile = await prisma.profile.findUnique({
+            where: { id: joinrequest.profileId },
+            select: { userId: true },
+          });
+
+          if (profile) {
+            await prisma.notification.create({
+              data: {
+                userId: profile.userId,
+                type: "JOIN_REQUEST",
+                content: "Your request has been approved",
+              },
+            });
+          }
+          res.json({
+            success: true,
+            message: "Join request approved. User added to group.",
+          });
+        });
+      }
+      if (action === "REJECTED") {
+        await prisma.groupJoinRequest.delete({
+          where: { id: requestId },
+        });
+        const profile = await prisma.profile.findUnique({
+          where: { id: joinrequest.profileId },
+          select: { userId: true },
+        });
+        if (profile) {
+          await prisma.notification.create({
+            data: {
+              userId: profile.userId,
+              type: "JOIN_REQUEST",
+              content: "Your request has been rejected by the admin",
+            },
+          });
+        }
+        return res.json({
+          message: "Your request has been rejected",
+          success: true,
+        });
+      }
+
+      return res.status(400).json({
+        success: false,
+        message: "Invalid action. Use APPROVE or REJECT",
+      });
+    } catch (error: any) {
+      console.log(error);
+      return res.status(500).json({
+        message: "Something went wrong",
+        success: false,
       });
     }
   }
