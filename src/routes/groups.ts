@@ -307,4 +307,26 @@ grouprouter.post(
     }
   }
 );
+grouprouter.get(
+  "/notification",
+  userMiddleware,
+  async (req: AuthRequest, res) => {
+    const userId = (req as any).user.id;
+    try {
+      const notification = await prisma.notification.findMany({
+        where: { userId, read: false },
+        orderBy: { createdAt: "desc" },
+      });
+      res.json({
+        success: true,
+        notification,
+      });
+    } catch (error: any) {
+      return res.status(500).json({
+        message: "failed to fetch the notifications",
+        success: false,
+      });
+    }
+  }
+);
 export { grouprouter };
