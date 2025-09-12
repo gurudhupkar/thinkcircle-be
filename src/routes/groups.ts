@@ -161,6 +161,7 @@ grouprouter.post("/join/:id", userMiddleware, async (req: AuthRequest, res) => {
     });
   }
 });
+// Admin routes
 grouprouter.get(
   "/join-request/:groupId",
   userMiddleware,
@@ -200,7 +201,6 @@ grouprouter.get(
     }
   }
 );
-
 grouprouter.post(
   "/:groupId/join-request/:requestId",
   userMiddleware,
@@ -307,26 +307,46 @@ grouprouter.post(
     }
   }
 );
-grouprouter.get(
-  "/notification",
+grouprouter.delete(
+  "/group/:groupId",
   userMiddleware,
   async (req: AuthRequest, res) => {
     const userId = (req as any).user.id;
+    console.log(userId);
+    const groupId = req.params.groupId as string;
+
     try {
-      const notification = await prisma.notification.findMany({
-        where: { userId, read: false },
-        orderBy: { createdAt: "desc" },
+      const group = await prisma.group.findUnique({
+        where: { id: groupId },
+        select: { adminId: true },
       });
-      res.json({
-        success: true,
-        notification,
-      });
+      console.log(group?.adminId);
+      if (!group || group.adminId !== userId) {
+        return res.status(403).json({
+          message: "You are not allowed to delete the group",
+          success: false,
+        });
+      } else {
+        await prisma.$transaction(async (tx) => {
+          await tx.groupMember.deleteMany({ where: { groupId } });
+          await tx.message.deleteMany({ where: { groupId } });
+          await tx.groupJoinRequest.deleteMany({ where: { groupId } });
+          await tx.summary.deleteMany({ where: { groupId } });
+          await tx.group.delete({ where: { id: groupId } });
+        });
+        return res.json({
+          success: true,
+          message: "Group and all related data deleted successfully",
+        });
+      }
     } catch (error: any) {
+      console.log(error);
       return res.status(500).json({
-        message: "failed to fetch the notifications",
+        message: "Something went wrong",
         success: false,
       });
     }
   }
 );
+
 export { grouprouter };

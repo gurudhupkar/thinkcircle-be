@@ -7,8 +7,9 @@ import path from "path";
 import cors from "cors";
 import { profilerouter } from "./routes/profile";
 import { grouprouter } from "./routes/groups";
-import http from "http";                  
-import { initSocket } from "./socket";    
+import http from "http";
+import { initSocket } from "./socket";
+import { notifyrouter } from "./routes/notification";
 
 dotenv.config();
 
@@ -31,21 +32,14 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 const uploadPath = path.resolve(__dirname, "../uploads");
 app.use("/uploads", express.static(uploadPath));
 
-
-
 var corsOptions = {
-  origin: [
-    "http://localhost:3000",
-    "http://localhost:5000",
+  origin: ["http://localhost:3000", "http://localhost:5000"],
+  credentials: true,
 
-    
-  ],
-  credentials: true, 
-
-  optionsSuccessStatus: 200, 
+  optionsSuccessStatus: 200,
 };
-app.use(cors(corsOptions))
-const port = process.env.PORT || 3001
+app.use(cors(corsOptions));
+const port = process.env.PORT || 3001;
 const prisma = new PrismaClient();
 const serverStartTime = Date.now();
 
@@ -74,14 +68,12 @@ connectDB();
 app.use("/api/v1/user", userRouter);
 app.use("/api/v1/profile", profilerouter);
 app.use("/api/v1/group", grouprouter);
+app.use("/api/v1/notification", notifyrouter);
 
-//done
 const httpServer = http.createServer(app);
-
 
 initSocket(httpServer);
 
 httpServer.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
- 
