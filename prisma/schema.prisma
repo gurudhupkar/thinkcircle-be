@@ -6,6 +6,12 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+enum MediaType {
+  IMAGE
+  VIDEO
+  AUDIO
+  FILE
+}
 
 enum Role {
   ADMIN
@@ -104,14 +110,29 @@ model GroupJoinRequest {
 }
 
 model Message {
-  id        String   @id @default(uuid())
-  group     Group    @relation(fields: [groupId], references: [id])
+  id        String       @id @default(uuid())
+  group     Group        @relation(fields: [groupId], references: [id])
   groupId   String
-  sender    User     @relation("UserMessages", fields: [senderId], references: [id])
+  sender    User         @relation("UserMessages", fields: [senderId], references: [id])
   senderId  String
   message   String
-  createdAt DateTime @default(now())
+  createdAt DateTime     @default(now())
+
+
+  attachments MessageAttachment[]
 }
+
+model MessageAttachment {
+  id        String        @id @default(uuid())
+  message   Message       @relation(fields: [messageId], references: [id])
+  messageId String
+  url       String        // where file is stored (S3, Cloudinary, etc.)
+  type      MediaType     // IMAGE, VIDEO, FILE, AUDIO
+  createdAt DateTime      @default(now())
+}
+
+
+
 
 model Summary {
   id            String   @id @default(uuid())
