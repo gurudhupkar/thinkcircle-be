@@ -7,6 +7,7 @@ import { Router } from "express";
 import { success } from "zod";
 import { connect } from "http2";
 import { error } from "console";
+import { id } from "zod/v4/locales/index.cjs";
 const prisma = new PrismaClient();
 
 const grouprouter: Router = Router();
@@ -93,6 +94,7 @@ grouprouter.get("/groups", async (req: AuthRequest, res) => {
 });
 grouprouter.post("/join/:id", userMiddleware, async (req: AuthRequest, res) => {
   const userId = (req as any).user.id;
+  const subjectFocus = req.body.subjectFocus;
   try {
     const groupId = req.params.id;
 
@@ -112,9 +114,9 @@ grouprouter.post("/join/:id", userMiddleware, async (req: AuthRequest, res) => {
     const group = await prisma.group.findUnique({
       where: { id: groupId },
     });
-    if (!group) {
+    if (!group || group.subjectFocus !== subjectFocus) {
       return res.status(400).json({
-        message: "Group does not exits",
+        message: "Group does not exits or your subjectfocus does not match",
         success: false,
       });
     }
@@ -348,5 +350,57 @@ grouprouter.delete(
     }
   }
 );
+grouprouter.delete(
+  "/groups/:groupId/memberId/:memberId",
+  userMiddleware,
+  async (req: AuthRequest, res) => {
+    const userId = (req as any).user.id;
+    const { groupId, memberId } = req.params;
 
+    try {
+      const group = await prisma.group.findUnique({
+        where: { id: groupId },
+      });
+      if (group?.adminId !== userId) {
+        return res.status(403).json({
+          message: "You are not allowed to remove any member",
+          success: false,
+        });
+      }
+      const groupmember = await prisma.groupMember.findUnique({
+        where: {
+          groupId_profileId: {
+            groupId,
+            profileId: memberId,
+          },
+        },
+      });
+      if (!groupmember) {
+        return res.status(404).json({
+          message: "Member does not exits",
+          success: false,
+        });
+      } else {
+        const deletemember = await prisma.groupMember.delete({
+          where: {
+            groupId_profileId: {
+              groupId,
+              profileId: memberId,
+            },
+          },
+        });
+      }
+      return res.status(200).json({
+        message: `User with ${memberId} has been deleted`,
+        success: true,
+      });
+    } catch (err: any) {
+      console.log(err);
+      return res.status(500).json({
+        message: "Something went wrong",
+        success: false,
+      });
+    }
+  }
+);
 export { grouprouter };
