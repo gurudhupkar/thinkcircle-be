@@ -163,36 +163,87 @@ grouprouter.post("/join/:id", userMiddleware, async (req: AuthRequest, res) => {
     });
   }
 });
-grouprouter.get("/group-members/:groupId", async (req: AuthRequest, res) => {
-  const groupId = req.params.groupId;
+grouprouter.get(
+  "/group-members/:groupId",
+  userMiddleware,
+  async (req: AuthRequest, res) => {
+    const groupId = req.params.groupId;
+    const userId = (req as any).user.id;
 
-  try {
-    const members = await prisma.groupMember.findMany({
-      where: { groupId: groupId },
-      select: {
-        role: true,
-        profileId: true,
-      },
-    });
-    if (!members) {
-      return res.status(404).json({
-        message: "unable to find the group members",
-        success: false,
+    try {
+      const profile = await prisma.profile.findUnique({
+        where: { userId: userId },
       });
-    } else {
+      if (!profile) {
+        return res.status(404).json({
+          message: "profile not found for this user",
+          success: false,
+        });
+      }
+      const group = await prisma.group.findUnique({
+        where: { id: groupId },
+      });
+      if (!group) {
+        return res.status(404).json({
+          message: "Group not found",
+          success: false,
+        });
+      }
+
+      const ismember = await prisma.groupMember.findUnique({
+        where: {
+          groupId_profileId: {
+            groupId,
+            profileId: profile.id,
+          },
+        },
+        select: {
+          role: true,
+          profileId: true,
+        },
+      });
+      if (!ismember) {
+        return res.status(403).json({
+          message: "You are not the member of this group",
+          success: false,
+        });
+      }
+      const members = await prisma.groupMember.findMany({
+        where: {
+          groupId: groupId,
+        },
+        select: {
+          role: true,
+          profile: {
+            select: {
+              id: true,
+              user: {
+                select: {
+                  id: true,
+                  firstname: true,
+                  lastname: true,
+                  email: true,
+                  profilepic: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
       res.status(200).json({
         success: true,
         members,
       });
+    } catch (error: any) {
+      console.log(error);
+      return res.status(500).json({
+        message: "Something went wrong",
+        success: false,
+      });
     }
-  } catch (error: any) {
-    console.log(error);
-    return res.status(500).json({
-      message: "Something went wrong",
-      success: false,
-    });
   }
-});
+);
 
 // Admin routes
 grouprouter.get(
