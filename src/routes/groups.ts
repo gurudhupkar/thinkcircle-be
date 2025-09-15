@@ -163,6 +163,37 @@ grouprouter.post("/join/:id", userMiddleware, async (req: AuthRequest, res) => {
     });
   }
 });
+grouprouter.get("/group-members/:groupId", async (req: AuthRequest, res) => {
+  const groupId = req.params.groupId;
+
+  try {
+    const members = await prisma.groupMember.findMany({
+      where: { groupId: groupId },
+      select: {
+        role: true,
+        profileId: true,
+      },
+    });
+    if (!members) {
+      return res.status(404).json({
+        message: "unable to find the group members",
+        success: false,
+      });
+    } else {
+      res.status(200).json({
+        success: true,
+        members,
+      });
+    }
+  } catch (error: any) {
+    console.log(error);
+    return res.status(500).json({
+      message: "Something went wrong",
+      success: false,
+    });
+  }
+});
+
 // Admin routes
 grouprouter.get(
   "/join-request/:groupId",
