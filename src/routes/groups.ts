@@ -299,7 +299,7 @@ grouprouter.delete(
   }
 );
 
-// Admin routes
+// admin
 grouprouter.get(
   "/join-request/:groupId",
   userMiddleware,
