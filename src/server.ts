@@ -33,7 +33,7 @@ const uploadPath = path.resolve(__dirname, "../uploads");
 app.use("/uploads", express.static(uploadPath));
 
 var corsOptions = {
-  origin: ["http://localhost:3000", "http://localhost:5000"],
+  origin: ["http://localhost:3000", "http://localhost:5000", "http://localhost:3500"],
   credentials: true,
 
   optionsSuccessStatus: 200,
