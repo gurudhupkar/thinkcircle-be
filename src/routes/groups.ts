@@ -244,6 +244,60 @@ grouprouter.get(
     }
   }
 );
+grouprouter.delete(
+  "/delete-request",
+  userMiddleware,
+  async (req: AuthRequest, res) => {
+    const userId = (req as any).user.id;
+    const { groupId } = req.body;
+
+    try {
+      const profile = await prisma.profile.findUnique({
+        where: { userId: userId },
+        select: { id: true },
+      });
+      if (!profile) {
+        return res.status(404).json({
+          message: "User not found",
+          success: false,
+        });
+      }
+      const groupjoin = await prisma.groupJoinRequest.findUnique({
+        where: {
+          groupId_profileId: {
+            groupId,
+            profileId: profile.id,
+          },
+        },
+      });
+      if (!groupjoin) {
+        return res.status(404).json({
+          message: "Join request not found",
+          success: false,
+        });
+      }
+      await prisma.groupJoinRequest.delete({
+        where: {
+          groupId_profileId: {
+            groupId,
+            profileId: profile.id,
+          },
+        },
+      });
+
+      return res.json({
+        message: "Join request deleted successfully",
+        success: true,
+      });
+    } catch (err: any) {
+      console.log(err);
+      return res.status(500).json({
+        message: "Something went wrong",
+        success: false,
+      });
+    }
+  }
+);
 
 // Admin routes
 grouprouter.get(
