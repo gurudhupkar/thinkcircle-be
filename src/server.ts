@@ -8,7 +8,7 @@ import cors from "cors";
 import { profilerouter } from "./routes/profile";
 import { grouprouter } from "./routes/groups";
 import http from "http";
-import { initSocket } from "./socket";
+import initSocket from "./socket";
 import { notifyrouter } from "./routes/notification";
 
 dotenv.config();
@@ -33,7 +33,11 @@ const uploadPath = path.resolve(__dirname, "../uploads");
 app.use("/uploads", express.static(uploadPath));
 
 var corsOptions = {
-  origin: ["http://localhost:3000", "http://localhost:5000", "http://localhost:3500"],
+  origin: [
+    "http://localhost:3000",
+    "http://localhost:5000",
+    "http://localhost:3500",
+  ],
   credentials: true,
 
   optionsSuccessStatus: 200,
