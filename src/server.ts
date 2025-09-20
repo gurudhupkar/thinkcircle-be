@@ -8,8 +8,9 @@ import cors from "cors";
 import { profilerouter } from "./routes/profile";
 import { grouprouter } from "./routes/groups";
 import http from "http";
-import initSocket from "./socket";
+// import  from "./socket";
 import { notifyrouter } from "./routes/notification";
+import { initSocket } from "./socket";
 
 dotenv.config();
 
@@ -37,6 +38,7 @@ var corsOptions = {
     "http://localhost:3000",
     "http://localhost:5000",
     "http://localhost:3500",
+    "http://127.0.0.1:5500",
   ],
   credentials: true,
 
