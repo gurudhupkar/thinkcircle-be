@@ -66,24 +66,29 @@ grouprouter.post(
     }
   }
 );
-grouprouter.get("/groups", async (req: AuthRequest, res) => {
+grouprouter.get("/groups", userMiddleware, async (req: AuthRequest, res) => {
   try {
-    const { subjectFocus } = req.body;
-    const findgroups = await prisma.group.findMany({
-      where: { subjectFocus: subjectFocus },
-    });
-    if (!findgroups) {
-      return res.status(400).json({
-        message: "Unable to find the groups",
-        success: false,
+    const subjectFocus = req.query.subjectFocus as string;
+    if (!subjectFocus) { throw Error("Enter Subjects ") }
+    if (subjectFocus) {
+
+      const findgroups = await prisma.group.findMany({
+        where: { subjectFocus: subjectFocus },
       });
-    } else {
-      return res.status(200).json({
-        message: "Found the groups",
-        success: true,
-        findgroups,
-      });
+      if (!findgroups) {
+        return res.status(400).json({
+          message: "Unable to find the groups",
+          success: false,
+        });
+      } else {
+        return res.status(200).json({
+          message: "Found the groups",
+          success: true,
+          findgroups,
+        });
+      }
     }
+
   } catch (error: any) {
     console.log(error);
     return res.status(500).json({
@@ -92,8 +97,38 @@ grouprouter.get("/groups", async (req: AuthRequest, res) => {
     });
   }
 });
+
+grouprouter.get("/my-groups", userMiddleware, async (req: AuthRequest, res) => {
+  try {
+
+    const userId = req.user?.id;
+    const groups = await prisma.profile.findUnique({
+      where: {
+        userId
+      },
+      select: {
+        memberships: {
+          include: {
+            group: true
+          }
+        },
+      }
+    })
+
+    if (groups) {
+      res.json({ success: true, groups: groups.memberships })
+    } else {
+      res.json({ success: false, message: "No groups joined", groups: [] })
+    }
+  } catch (err) {
+    res.json({ success: false, message: "Unable to find associated groups" })
+  }
+
+})
+
 grouprouter.post("/join/:id", userMiddleware, async (req: AuthRequest, res) => {
   const userId = (req as any).user.id;
+  console.log("USerId:", userId)
   const subjectFocus = req.body.subjectFocus;
   try {
     const groupId = req.params.id;

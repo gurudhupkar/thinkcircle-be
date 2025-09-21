@@ -12,10 +12,13 @@ import http from "http";
 import { notifyrouter } from "./routes/notification";
 import { initSocket } from "./socket";
 
+import morgan from "morgan";
 dotenv.config();
 
 const app = express();
 app.use(express.json());
+
+app.use(morgan("dev"))
 
 const limiter = rateLimit({
   windowMs: process.env.RATE_LIMIT_WINDOW_MS
