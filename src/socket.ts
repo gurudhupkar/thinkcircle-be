@@ -51,6 +51,39 @@ export function initSocket(server: HttpServer) {
     console.log(
       `✅ Socket connected: ${socket.id}  (user: ${socket.data.user?.id})`
     );
+    // add inside io.on("connection", socket => { ... })
+    socket.on("join-group", async (payload, ack) => {
+      try {
+        // Accept either a string groupId or { groupId: "..." }
+        const groupId =
+          typeof payload === "string" ? payload : payload?.groupId;
+        if (!groupId)
+          return ack?.({ success: false, message: "groupId missing" });
+
+        // verify membership
+        const member = await prisma.groupMember.findUnique({
+          where: {
+            groupId_profileId: {
+              groupId,
+              profileId: socket.data.profileId,
+            },
+          },
+        });
+        if (!member) {
+          return ack?.({
+            success: false,
+            message: "You are not a member of this group",
+          });
+        }
+
+        socket.join(groupId);
+        console.log(`🟢 ${socket.data.user.id} joined group ${groupId}`);
+        ack?.({ success: true, message: "joined" });
+      } catch (err) {
+        console.log("join-group error", err);
+        ack?.({ success: false, message: "server error" });
+      }
+    });
   });
 
   return io;
