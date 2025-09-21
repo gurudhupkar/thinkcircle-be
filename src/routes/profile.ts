@@ -20,9 +20,9 @@ profilerouter.post(
       // console.log(req.body);
 
       if (!parsedata.success) {
-        // console.log(parsedata)
-        return res.status(400).json({
-          message: "Please enter all the valid fields",
+        // console.log(parsedata.error._zod.def[0].message)
+        return res.status(200).json({
+          message: parsedata.error._zod.def[0].message ? parsedata.error._zod.def[0].message : "Please enter all the valid fields",
           success: false,
         });
       }
@@ -165,10 +165,10 @@ profilerouter.get(
       const profiles = await prisma.profile.findMany({
         where: subject
           ? {
-              subjects: {
-                has: subject as string,
-              },
-            }
+            subjects: {
+              has: subject as string,
+            },
+          }
           : {},
         select: {
           id: true,
