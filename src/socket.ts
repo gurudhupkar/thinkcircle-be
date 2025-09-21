@@ -153,6 +153,23 @@ export function initSocket(server: HttpServer) {
           ack({ success: false, message: "server error" });
       }
     });
+
+    socket.on("leave-group", async (payload, ack) => {
+      try {
+        const groupId =
+          typeof payload === "string" ? payload : payload?.groupId;
+        if (!groupId) {
+          return ack({ success: false, message: "groupId missing" });
+        }
+        socket.leave(groupId);
+
+        console.log(`${socket.data.user.id} left the ${groupId}`);
+        ack({ success: true, message: "left" });
+      } catch (err) {
+        console.log("leave-group error", err);
+        ack?.({ success: false, message: "server error" });
+      }
+    });
   });
 
   return io;
