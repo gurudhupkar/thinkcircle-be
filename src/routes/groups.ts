@@ -2,7 +2,7 @@ import express from "express";
 import { PrismaClient, Role } from "@prisma/client";
 import jwt from "jsonwebtoken";
 import { AuthRequest, userMiddleware } from "../middleware/authmiddleware";
-import { Router } from "express";
+import e, { Router } from "express";
 // import { formGroups } from "../utils/Formation";
 import { success } from "zod";
 import { connect } from "http2";
@@ -128,12 +128,10 @@ grouprouter.get("/my-groups", userMiddleware, async (req: AuthRequest, res) => {
 
 grouprouter.post("/join/:id", userMiddleware, async (req: AuthRequest, res) => {
   const userId = (req as any).user.id;
-  console.log("USerId:", userId);
   const subjectFocus = req.body.subjectFocus;
   try {
     const groupId = req.params.id;
 
-    console.log(groupId);
 
     const profile = await prisma.profile.findUnique({
       where: { userId: userId },
@@ -170,26 +168,47 @@ grouprouter.post("/join/:id", userMiddleware, async (req: AuthRequest, res) => {
       });
     }
 
-    const joinrequest = await prisma.groupJoinRequest.create({
-      data: {
-        groupId,
-        profileId: profile.id,
-        status: "PENDING",
-      },
-    });
-    await prisma.notification.create({
-      data: {
-        userId: group.adminId,
-        type: "JOIN_REQUEST",
-        content: `User ${profile.id} requested to join your group ${group.name}`,
-      },
-    });
+    const findRequest = await prisma.groupJoinRequest.findUnique({
+      where: {
+        groupId_profileId: {
+          groupId,
+          profileId: profile.id,
+        },
+        status: "PENDING"
+      }
+    })
 
-    res.status(201).json({
-      message: "Join request sent successfully.",
-      success: true,
-      joinrequest,
-    });
+    if (findRequest) {
+      res.status(201).json({
+        message: "You have already applied for this group",
+        success: true,
+      });
+    }
+    else {
+
+
+      const joinrequest = await prisma.groupJoinRequest.create({
+        data: {
+          groupId,
+          profileId: profile.id,
+          status: "PENDING",
+        },
+      });
+      await prisma.notification.create({
+        data: {
+          userId: group.adminId,
+          type: "JOIN_REQUEST",
+          content: `User ${req.user?.firstname} ${req.user?.lastname} requested to join your group ${group.name}`,
+        },
+      });
+
+      res.status(201).json({
+        message: "Join request sent successfully.",
+        success: true,
+        joinrequest,
+      });
+    }
+
   } catch (error: any) {
     console.log(error);
     return res.status(500).json({
@@ -359,7 +378,13 @@ grouprouter.get(
       }
       const request = await prisma.groupJoinRequest.findMany({
         where: { groupId },
-        select: { profile: true, status: true },
+        select: {
+          profile: {
+            include: {
+              user: true
+            }
+          }, createdAt: true, status: true, id: true
+        },
       });
       res.status(200).json({
         success: true,
