@@ -423,5 +423,6 @@ userRouter.post(
     }
   }
 );
+userRouter.post("/logout", userMiddleware, async (req: AuthRequest, res) => {});
 
 export { userRouter };

@@ -8,6 +8,8 @@ import { success } from "zod";
 import { connect } from "http2";
 import { error } from "console";
 import { id } from "zod/v4/locales/index.cjs";
+import { upload } from "../middleware/upload";
+import { io } from "../socket";
 const prisma = new PrismaClient();
 
 const grouprouter: Router = Router();
@@ -69,9 +71,10 @@ grouprouter.post(
 grouprouter.get("/groups", userMiddleware, async (req: AuthRequest, res) => {
   try {
     const subjectFocus = req.query.subjectFocus as string;
-    if (!subjectFocus) { throw Error("Enter Subjects ") }
+    if (!subjectFocus) {
+      throw Error("Enter Subjects ");
+    }
     if (subjectFocus) {
-
       const findgroups = await prisma.group.findMany({
         where: { subjectFocus: subjectFocus },
       });
@@ -88,7 +91,6 @@ grouprouter.get("/groups", userMiddleware, async (req: AuthRequest, res) => {
         });
       }
     }
-
   } catch (error: any) {
     console.log(error);
     return res.status(500).json({
@@ -100,35 +102,33 @@ grouprouter.get("/groups", userMiddleware, async (req: AuthRequest, res) => {
 
 grouprouter.get("/my-groups", userMiddleware, async (req: AuthRequest, res) => {
   try {
-
     const userId = req.user?.id;
     const groups = await prisma.profile.findUnique({
       where: {
-        userId
+        userId,
       },
       select: {
         memberships: {
           include: {
-            group: true
-          }
+            group: true,
+          },
         },
-      }
-    })
+      },
+    });
 
     if (groups) {
-      res.json({ success: true, groups: groups.memberships })
+      res.json({ success: true, groups: groups.memberships });
     } else {
-      res.json({ success: false, message: "No groups joined", groups: [] })
+      res.json({ success: false, message: "No groups joined", groups: [] });
     }
   } catch (err) {
-    res.json({ success: false, message: "Unable to find associated groups" })
+    res.json({ success: false, message: "Unable to find associated groups" });
   }
-
-})
+});
 
 grouprouter.post("/join/:id", userMiddleware, async (req: AuthRequest, res) => {
   const userId = (req as any).user.id;
-  console.log("USerId:", userId)
+  console.log("USerId:", userId);
   const subjectFocus = req.body.subjectFocus;
   try {
     const groupId = req.params.id;
@@ -570,6 +570,71 @@ grouprouter.delete(
       return res.status(500).json({
         message: "Something went wrong",
         success: false,
+      });
+    }
+  }
+);
+
+// attachment upload route
+
+grouprouter.post(
+  "/attachments/:groupId",
+  userMiddleware,
+  upload.single("file"),
+  async (req: AuthRequest, res) => {
+    try {
+      const { groupId } = req.params;
+      const { message } = req.body;
+      const senderId = (req as any).user.id;
+      if (!senderId || !groupId) {
+        return res.status(400).json({
+          success: false,
+          message: "groupId required",
+        });
+      }
+      if (!req.file) {
+        return res
+          .status(400)
+          .json({ success: false, message: "please upload the file" });
+      }
+
+      const member = await prisma.groupMember.findUnique({
+        where: { groupId_profileId: { groupId, profileId: req.user!.id } },
+      });
+      if (!member) {
+        return res.status(401).json({
+          success: false,
+          message: "you are not a member of the group",
+        });
+      }
+
+      const newmessage = await prisma.message.create({
+        data: {
+          groupId,
+          message: message || "",
+          senderId: senderId,
+        },
+      });
+      if (req.file) {
+        await prisma.messageAttachment.create({
+          data: {
+            messageId: newmessage.id,
+            url: `/uploads/${req.file.filename}`,
+            type: "FILE",
+          },
+        });
+      }
+      const fullMessage = await prisma.message.findUnique({
+        where: { id: newmessage.id },
+        include: { attachments: true, sender: true },
+      });
+      io.to(groupId).emit("new-message", fullMessage);
+      res.json(fullMessage);
+    } catch (err: any) {
+      console.log(err);
+      return res.status(500).json({
+        success: false,
+        message: "Something went wrong",
       });
     }
   }

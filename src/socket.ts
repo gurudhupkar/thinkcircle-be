@@ -8,6 +8,7 @@ import { id } from "zod/v4/locales/index.cjs";
 const prisma = new PrismaClient();
 const JWT_USER_SEC = process.env.SECRET_KEY || "YOUR_SECRET_FOR_TESTING";
 
+export let io: IOServer;
 export function initSocket(server: HttpServer) {
   const io = new IOServer(server, {
     cors: {
@@ -48,7 +49,7 @@ export function initSocket(server: HttpServer) {
 
   io.on("connection", (socket) => {
     console.log(
-      `✅ Socket connected: ${socket.id}  (user: ${socket.data.user?.id})`
+      ` Socket connected: ${socket.id}  (user: ${socket.data.user?.id})`
     );
 
     socket.on("join-group", async (payload, ack) => {
@@ -75,7 +76,7 @@ export function initSocket(server: HttpServer) {
         }
 
         socket.join(groupId);
-        console.log(`🟢 ${socket.data.user.id} joined group ${groupId}`);
+        console.log(` ${socket.data.user.id} joined group ${groupId}`);
         ack?.({ success: true, message: "joined" });
       } catch (err) {
         console.log("join-group error", err);
