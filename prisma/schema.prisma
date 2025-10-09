@@ -49,6 +49,7 @@ model User {
   messages       Message[]       @relation("UserMessages")
   notifications  Notification[]
   groupsAdmin    Group[]         @relation("GroupAdmin") 
+  messageReads   MessageRead[]
 }
 
 model Profile {
@@ -118,7 +119,7 @@ model Message {
   message   String
   createdAt DateTime     @default(now())
 
-
+reads       MessageRead[] 
   attachments MessageAttachment[]
 }
 
@@ -126,9 +127,19 @@ model MessageAttachment {
   id        String        @id @default(uuid())
   message   Message       @relation(fields: [messageId], references: [id])
   messageId String
-  url       String        // where file is stored (S3, Cloudinary, etc.)
-  type      MediaType     // IMAGE, VIDEO, FILE, AUDIO
+  url       String        
+  type      MediaType    
   createdAt DateTime      @default(now())
+}
+model MessageRead {
+  id         String   @id @default(uuid())
+  message    Message  @relation(fields: [messageId], references: [id])
+  messageId  String
+  user       User     @relation(fields: [userId], references: [id])
+  userId     String
+  readAt     DateTime @default(now())
+
+  @@unique([messageId, userId])
 }
 
 
