@@ -207,8 +207,8 @@ export function initSocket(server: HttpServer) {
   }
 
   // 🔹 In-memory structures
-  const onlineUsers: Record<string, Set<string>> = {}; // groupId → Set(userId)
-  const messageTimestamps = new Map<string, number>(); // userId → last message timestamp
+  const onlineUsers: Record<string, Set<string>> = {};
+  const messageTimestamps = new Map<string, number>();
 
   // 🔹 Auth middleware
   io.use(async (socket, next) => {
