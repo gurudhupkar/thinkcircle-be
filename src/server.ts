@@ -13,12 +13,13 @@ import { notifyrouter } from "./routes/notification";
 import { initSocket } from "./socket";
 
 import morgan from "morgan";
+import { summaryRouter } from "./routes/summery";
 dotenv.config();
 
 const app = express();
 app.use(express.json());
 
-app.use(morgan("dev"))
+app.use(morgan("dev"));
 
 const limiter = rateLimit({
   windowMs: process.env.RATE_LIMIT_WINDOW_MS
@@ -78,6 +79,7 @@ app.use("/api/v1/user", userRouter);
 app.use("/api/v1/profile", profilerouter);
 app.use("/api/v1/group", grouprouter);
 app.use("/api/v1/notification", notifyrouter);
+app.use("/api/v1/summary", summaryRouter);
 
 const httpServer = http.createServer(app);
 
