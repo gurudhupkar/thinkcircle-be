@@ -10,6 +10,7 @@ import { error } from "console";
 import { id } from "zod/v4/locales/index.cjs";
 import { upload } from "../middleware/upload";
 import { io } from "../socket";
+import { suggestgroups } from "../utils/Formation";
 const prisma = new PrismaClient();
 
 const grouprouter: Router = Router();
@@ -132,7 +133,6 @@ grouprouter.post("/join/:id", userMiddleware, async (req: AuthRequest, res) => {
   try {
     const groupId = req.params.id;
 
-
     const profile = await prisma.profile.findUnique({
       where: { userId: userId },
     });
@@ -174,19 +174,16 @@ grouprouter.post("/join/:id", userMiddleware, async (req: AuthRequest, res) => {
           groupId,
           profileId: profile.id,
         },
-        status: "PENDING"
-      }
-    })
+        status: "PENDING",
+      },
+    });
 
     if (findRequest) {
       res.status(201).json({
         message: "You have already applied for this group",
         success: true,
       });
-    }
-    else {
-
-
+    } else {
       const joinrequest = await prisma.groupJoinRequest.create({
         data: {
           groupId,
@@ -208,7 +205,6 @@ grouprouter.post("/join/:id", userMiddleware, async (req: AuthRequest, res) => {
         joinrequest,
       });
     }
-
   } catch (error: any) {
     console.log(error);
     return res.status(500).json({
@@ -352,7 +348,27 @@ grouprouter.delete(
     }
   }
 );
-
+grouprouter.get(
+  "/suggest-groups",
+  userMiddleware,
+  async (req: AuthRequest, res) => {
+    try {
+      const userId = (req as any).user.id;
+      const subjectFocus = req.query.subjectFocus as string | undefined;
+      const suggestions = await suggestgroups(userId, subjectFocus);
+      res.status(200).json({
+        message: " Group suggestions generated successfully",
+        suggestions,
+      });
+    } catch (error: any) {
+      console.log(error);
+      return res.status(500).json({
+        message: "Something went wrong",
+        success: false,
+      });
+    }
+  }
+);
 // admin
 grouprouter.get(
   "/join-request/:groupId",
@@ -381,9 +397,12 @@ grouprouter.get(
         select: {
           profile: {
             include: {
-              user: true
-            }
-          }, createdAt: true, status: true, id: true
+              user: true,
+            },
+          },
+          createdAt: true,
+          status: true,
+          id: true,
         },
       });
       res.status(200).json({
