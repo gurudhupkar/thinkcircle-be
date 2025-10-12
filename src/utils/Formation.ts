@@ -1,45 +1,45 @@
-// import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
+import { equal } from "assert";
+import { maxSize } from "zod";
 
-// const prisma = new PrismaClient();
+const prisma = new PrismaClient();
 
-// export async function formGroups() {
+export async function suggestgroups(userId: string, subjectFocus?: string) {
+  return await prisma.$transaction(async (tx) => {
+    const group = await tx.group.findMany({
+      where: subjectFocus
+        ? {
+            subjectFocus: {
+              equals: subjectFocus,
+              mode: "insensitive",
+            },
+          }
+        : {},
+      include: {
+        members: true,
+      },
+    });
 
-//   const ungroupedProfiles = await prisma.profile.findMany({
-//     where: { groupId: null },
-//   });
+    const availableGroups = group.filter(
+      (group) => group.members.length < group.maxSize
+    );
+    const sortedgroups = availableGroups.sort(
+      (a, b) => b.maxSize - b.members.length - (a.maxSize - a.members.length)
+    );
+    const suggestedgroups = sortedgroups.map((group) => ({
+      id: group.id,
+      name: group.name,
+      subjectFocus: group.subjectFocus,
+      currentMembers: group.members.length,
+      maxSize: group.maxSize,
+      availableSpots: group.maxSize - group.members.length,
+    }));
 
-//   for (const profile of ungroupedProfiles) {
-
-//     let assigned = false;
-
-//     for (const subject of profile.subjects) {
-//       let group = await prisma.group.findFirst({
-//         where: { subjectFocus: subject },
-//       });
-
-//       if (!group) {
-//         group = await prisma.group.create({
-//           data: {
-//             name: `${subject} Study Group`,
-//             subjectFocus: subject,
-//             createdByAI: true,
-//           },
-//         });
-//       }
-
-//       await prisma.profile.update({
-//         where: { id: profile.id },
-//         data: { groupId: group.id },
-//       });
-
-//       assigned = true;
-//       break;
-//     }
-
-//     if (!assigned) {
-//       console.log(`No suitable group found for profile ${profile.id}`);
-//     }
-//   }
-
-//   return { message: "Groups formed successfully!" };
-// }
+    return {
+      userId,
+      subjectFocus: subjectFocus || "All subjects",
+      totalSuggestions: suggestedgroups.length,
+      suggestedgroups,
+    };
+  });
+}
