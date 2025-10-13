@@ -130,89 +130,104 @@ grouprouter.get("/my-groups", userMiddleware, async (req: AuthRequest, res) => {
 grouprouter.post("/join/:id", userMiddleware, async (req: AuthRequest, res) => {
   const userId = (req as any).user.id;
   const subjectFocus = req.body.subjectFocus;
+  const groupId = req.params.id;
+
   try {
-    const groupId = req.params.id;
-
-    const profile = await prisma.profile.findUnique({
-      where: { userId: userId },
-    });
-
-    if (!profile) {
-      return res.status(400).json({
-        message: "profile not found",
-        success: false,
+    const result = await prisma.$transaction(async (tx) => {
+      const profile = await tx.profile.findUnique({
+        where: { userId },
       });
-    }
 
-    const group = await prisma.group.findUnique({
-      where: { id: groupId },
-    });
-    if (!group || group.subjectFocus !== subjectFocus) {
-      return res.status(400).json({
-        message: "Group does not exits or your subjectfocus does not match",
-        success: false,
+      if (!profile) {
+        return {
+          status: 400,
+          message: "Profile not found",
+          success: false,
+        };
+      }
+
+      const group = await tx.group.findUnique({
+        where: { id: groupId },
       });
-    }
-    const groupmember = await prisma.groupMember.findUnique({
-      where: {
-        groupId_profileId: {
-          groupId,
-          profileId: profile.id,
+
+      if (!group || group.subjectFocus !== subjectFocus) {
+        return {
+          status: 400,
+          message: "Group does not exist or your subject focus does not match",
+          success: false,
+        };
+      }
+
+      const existingMember = await tx.groupMember.findUnique({
+        where: {
+          groupId_profileId: {
+            groupId,
+            profileId: profile.id,
+          },
         },
-      },
-    });
-    if (groupmember) {
-      return res.status(400).json({
-        message: "you are already the part of the given group",
-        success: false,
       });
-    }
 
-    const findRequest = await prisma.groupJoinRequest.findUnique({
-      where: {
-        groupId_profileId: {
-          groupId,
-          profileId: profile.id,
+      if (existingMember) {
+        return {
+          status: 400,
+          message: "You are already part of this group",
+          success: false,
+        };
+      }
+
+      const existingRequest = await tx.groupJoinRequest.findUnique({
+        where: {
+          groupId_profileId: {
+            groupId,
+            profileId: profile.id,
+          },
         },
-        status: "PENDING",
-      },
-    });
-
-    if (findRequest) {
-      res.status(201).json({
-        message: "You have already applied for this group",
-        success: true,
       });
-    } else {
-      const joinrequest = await prisma.groupJoinRequest.create({
+
+      if (existingRequest && existingRequest.status === "PENDING") {
+        return {
+          status: 201,
+          message: "You have already applied for this group",
+          success: true,
+        };
+      }
+
+      const joinRequest = await tx.groupJoinRequest.create({
         data: {
           groupId,
           profileId: profile.id,
           status: "PENDING",
         },
       });
-      await prisma.notification.create({
+
+      await tx.notification.create({
         data: {
           userId: group.adminId,
           type: "JOIN_REQUEST",
-          content: `User ${req.user?.firstname} ${req.user?.lastname} requested to join your group ${group.name}`,
+          content: `User ${(req as any).user.firstname} ${
+            (req as any).user.lastname
+          } requested to join your group ${group.name}`,
         },
       });
 
-      res.status(201).json({
+      return {
+        status: 201,
         message: "Join request sent successfully.",
         success: true,
-        joinrequest,
-      });
-    }
+        joinRequest,
+      };
+    });
+
+    res.status(result.status).json(result);
   } catch (error: any) {
-    console.log(error);
+    console.error(" Error in join route:", error);
     return res.status(500).json({
       message: "Something went wrong",
       success: false,
     });
   }
 });
+
 grouprouter.get(
   "/group-members/:groupId",
   userMiddleware,
