@@ -34,4 +34,46 @@ notifyrouter.get(
   }
 );
 
+notifyrouter.post("/read/notification", userMiddleware, async (req, res) => {
+  // if readAll is true no id is required, all notifications will be marked as read
+  // if one notification needs to be set as read readAll needs to be false and id 
+  // needs to be passed
+  const { id, readAll } = req.body
+  const userId = (req as any).user.id;
+
+  if (id && !readAll && userId) {
+    try {
+
+      await prisma.notification.update({
+        where: { id, userId }, data: {
+          read: true
+        }
+      })
+
+      res.json({ success: true, message: "Notification marked as read" })
+
+    } catch (err) {
+      console.log(err)
+      res.json({ error: true, message: "Unable to mark notification as read." })
+    }
+  }
+  if (readAll && userId) {
+    try {
+
+      await prisma.notification.updateMany({
+        where: { userId, read: false }, data: { read: true }
+      })
+      res.json({ success: true, message: "Notifications marked as read" })
+
+
+    } catch (err) {
+      res.json({ error: true, message: "Unable to mark notifications as read" })
+    }
+  }
+  else {
+    res.json({ error: true, message: "Unexpected error occured" })
+  }
+
+})
+
 export { notifyrouter };

@@ -204,9 +204,8 @@ grouprouter.post("/join/:id", userMiddleware, async (req: AuthRequest, res) => {
         data: {
           userId: group.adminId,
           type: "JOIN_REQUEST",
-          content: `User ${(req as any).user.firstname} ${
-            (req as any).user.lastname
-          } requested to join your group ${group.name}`,
+          content: `User ${(req as any).user.firstname} ${(req as any).user.lastname
+            } requested to join your group ${group.name}`,
         },
       });
 
@@ -483,6 +482,22 @@ grouprouter.post(
             where: { id: requestId },
           });
 
+          let grp = await tx.group.findFirst({
+            where: { id: groupId }
+          })
+
+          if (grp) {
+
+            const oldMemberCount = grp?.memberCount;
+            await tx.group.update({
+              where: { id: groupId }, data: {
+                memberCount: oldMemberCount + 1
+              }
+            })
+          } else {
+            throw new Error("Could not update member count")
+          }
+
           const profile = await prisma.profile.findUnique({
             where: { id: joinrequest.profileId },
             select: { userId: true },
@@ -504,26 +519,46 @@ grouprouter.post(
         });
       }
       if (action === "REJECTED") {
-        await prisma.groupJoinRequest.delete({
-          where: { id: requestId },
-        });
-        const profile = await prisma.profile.findUnique({
-          where: { id: joinrequest.profileId },
-          select: { userId: true },
-        });
-        if (profile) {
-          await prisma.notification.create({
-            data: {
-              userId: profile.userId,
-              type: "JOIN_REQUEST",
-              content: "Your request has been rejected by the admin",
-            },
+        await prisma.$transaction(async (tx) => {
+          await tx.groupJoinRequest.delete({
+            where: { id: requestId },
           });
-        }
-        return res.json({
-          message: "Your request has been rejected",
-          success: true,
-        });
+          const profile = await tx.profile.findUnique({
+            where: { id: joinrequest.profileId },
+            select: { userId: true },
+          });
+
+          let grp = await tx.group.findFirst({
+            where: { id: groupId }
+          })
+
+          if (grp) {
+
+            const oldMemberCount = grp?.memberCount;
+            await tx.group.update({
+              where: { id: groupId }, data: {
+                memberCount: oldMemberCount - 1
+              }
+            })
+          } else {
+            throw new Error("Could not update member count")
+          }
+
+
+          if (profile) {
+            await tx.notification.create({
+              data: {
+                userId: profile.userId,
+                type: "JOIN_REQUEST",
+                content: "Your request has been rejected by the admin",
+              },
+            });
+          }
+          return res.json({
+            message: "Your request has been rejected",
+            success: true,
+          });
+        })
       }
 
       return res.status(400).json({

@@ -76,8 +76,7 @@ model Group {
   maxSize       Int               @default(10)
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
-
-
+  memberCount   Int               @default(0)
   members       GroupMember[]
   messages      Message[]
   summaries     Summary[]
