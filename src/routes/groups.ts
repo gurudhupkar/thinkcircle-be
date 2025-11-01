@@ -21,7 +21,7 @@ grouprouter.post(
   async (req: AuthRequest, res) => {
     const userId = (req as any).user.id;
     try {
-      const { subjectFocus, name, maxsize } = req.body;
+      const { subjectFocus, name, maxsize, description } = req.body;
       if (!subjectFocus || !name) {
         return res.status(400).json({
           message: "Enter the given fields",
@@ -37,6 +37,8 @@ grouprouter.post(
             connect: { id: userId },
           },
           maxSize: maxsize,
+          description,
+          memberCount: 1,
           createdByAI: false,
         },
       });
@@ -733,4 +735,129 @@ grouprouter.post(
     }
   }
 );
+
+
+// group details route
+
+grouprouter.get("/:id/details", userMiddleware, async (req, res) => {
+  const userId = (req as any).user.id;
+  const id = req.params.id
+  try {
+    const group = await prisma.group.findFirst({
+      where: { id },
+      include: {
+        admin: true,
+        members: {
+          include: {
+            profile: {
+              include: {
+                user: {
+                  select: {
+                    firstname: true,
+                    lastname: true,
+                    profilepic: true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    })
+    if (group) {
+      res.status(200).json({ success: true, message: "Group found", group })
+    } else {
+      res.status(401).json({ error: true, message: "You are not a member of this group." })
+    }
+  } catch (err) {
+    console.log(err)
+    res.status(503).json({ error: true, message: "Unable to fetch group details. Please try again later" })
+  }
+
+})
+
+
+// Edit group name and description
+grouprouter.put(
+  "/edit/:groupId",
+  userMiddleware,
+  async (req: AuthRequest, res) => {
+    const userId = req.user?.id;
+    const { groupId } = req.params;
+    const { name, description } = req.body;
+
+    try {
+      // Validate input
+      if (!name && !description) {
+        return res.status(400).json({
+          success: false,
+          message: "Please provide a new name or description to update.",
+        });
+      }
+
+      // Find the group and verify ownership
+      const group = await prisma.group.findUnique({
+        where: { id: groupId },
+        select: { adminId: true },
+      });
+
+      if (!group) {
+        return res.status(404).json({
+          success: false,
+          message: "Group not found.",
+        });
+      }
+
+      if (group.adminId !== userId) {
+        return res.status(403).json({
+          success: false,
+          message: "You are not authorized to edit this group.",
+        });
+      }
+
+      // Update group details
+      const updatedGroup = await prisma.group.update({
+        where: { id: groupId },
+        data: {
+          ...(name && { name }),
+          ...(description && { description }),
+        },
+        include: {
+          admin: true,
+          members: {
+            include: {
+              profile: {
+                include: {
+                  user: {
+                    select: {
+                      firstname: true,
+                      lastname: true,
+                      profilepic: true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: "Group details updated successfully.",
+        group: updatedGroup,
+      });
+    } catch (error: any) {
+      console.error("Error updating group:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Something went wrong while updating the group.",
+      });
+    }
+  }
+);
+
+
+
 export { grouprouter };

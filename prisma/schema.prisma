@@ -78,6 +78,7 @@ model Group {
   updatedAt     DateTime          @updatedAt
   memberCount   Int               @default(0)
   members       GroupMember[]
+  description   String            @default("")
   messages      Message[]
   summaries     Summary[]
   admin         User              @relation("GroupAdmin", fields: [adminId], references: [id])
@@ -91,6 +92,7 @@ model GroupMember {
   groupId   String
   profile   Profile  @relation(fields: [profileId], references: [id])
   profileId String
+  online    Boolean  @default(false)
   role      Role     @default(MEMBER)
   joinedAt  DateTime @default(now())
 
