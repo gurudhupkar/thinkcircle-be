@@ -577,48 +577,82 @@ grouprouter.post(
   }
 );
 grouprouter.delete(
-  "/group/:groupId",
+  "/delete/:groupId",
   userMiddleware,
   async (req: AuthRequest, res) => {
     const userId = (req as any).user.id;
-    console.log(userId);
     const groupId = req.params.groupId as string;
 
     try {
       const group = await prisma.group.findUnique({
         where: { id: groupId },
-        select: { adminId: true },
+        select: {
+          id: true,
+          name: true,
+          adminId: true,
+          members: {
+            select: {
+              profile: {
+                select: {
+                  userId: true,
+                },
+              },
+            },
+          },
+        },
       });
-      console.log(group?.adminId);
+
       if (!group || group.adminId !== userId) {
         return res.status(403).json({
           message: "You are not allowed to delete the group",
           success: false,
         });
-      } else {
-        await prisma.$transaction(async (tx) => {
-          await tx.groupMember.deleteMany({ where: { groupId } });
-          await tx.message.deleteMany({ where: { groupId } });
-          await tx.groupJoinRequest.deleteMany({ where: { groupId } });
-          await tx.summary.deleteMany({ where: { groupId } });
-          await tx.group.delete({ where: { id: groupId } });
-        });
-        return res.json({
-          success: true,
-          message: "Group and all related data deleted successfully",
-        });
       }
-    } catch (error: any) {
-      console.log(error);
+
+      // Extract member userIds (excluding admin if needed)
+      const memberUserIds = group.members.map(
+        (m) => m.profile.userId
+      );
+
+      // Start transaction
+      await prisma.$transaction(async (tx) => {
+        // 1️⃣ Delete related data
+        await tx.groupMember.deleteMany({ where: { groupId } });
+        await tx.message.deleteMany({ where: { groupId } });
+        await tx.groupJoinRequest.deleteMany({ where: { groupId } });
+        await tx.summary.deleteMany({ where: { groupId } });
+        await tx.group.delete({ where: { id: groupId } });
+
+        // 2️⃣ Create notifications for all group members
+        await Promise.all(
+          memberUserIds.map((uid) =>
+            tx.notification.create({
+              data: {
+                userId: uid,
+                type: "SYSTEM",
+                content: `The group "${group.name}" has been deleted by the admin.`,
+              },
+            })
+          )
+        );
+      });
+
+      return res.json({
+        success: true,
+        message: "Group deleted and members notified successfully.",
+      });
+    } catch (error) {
+      console.error(error);
       return res.status(500).json({
-        message: "Something went wrong",
+        message: "Something went wrong while deleting the group",
         success: false,
       });
     }
   }
 );
-grouprouter.delete(
-  "/groups/:groupId/memberId/:memberId",
+
+grouprouter.post(
+  "/:groupId/memberId/:memberId",
   userMiddleware,
   async (req: AuthRequest, res) => {
     const userId = (req as any).user.id;
@@ -627,7 +661,33 @@ grouprouter.delete(
     try {
       const group = await prisma.group.findUnique({
         where: { id: groupId },
+        select: {
+          id: true,
+          name: true,
+          adminId: true,
+          memberCount: true,
+          admin: true,
+          members: {
+            select: {
+              profile: {
+                select: {
+                  userId: true,
+                  id: true,
+                  user: {
+                    select: {
+                      id: true,
+                      firstname: true,
+                      lastname: true,
+                    },
+                  }
+                },
+              },
+            },
+          },
+        },
       });
+
+
       if (group?.adminId !== userId) {
         return res.status(403).json({
           message: "You are not allowed to remove any member",
@@ -656,10 +716,54 @@ grouprouter.delete(
             },
           },
         });
+        if (group) {
+          let id = group?.members.find(m => m.profile.id === memberId)?.profile.userId;
+
+          await prisma.group.update({
+            where: { id: groupId },
+            data: {
+              memberCount: group.memberCount - 1
+            }
+          });
+          if (id) {
+
+            await prisma.notification.create({
+              data: {
+                userId: id,
+                type: "SYSTEM",
+                content: `You have been removed from the group ${group.name}`,
+              },
+            });
+          }
+        }
       }
+      let name = group?.members.find(m => m.profile.id === memberId)?.profile.user.firstname
+
+      const updatedgroup = await prisma.group.findFirst({
+        where: { id: groupId },
+        include: {
+          admin: true,
+          members: {
+            include: {
+              profile: {
+                include: {
+                  user: {
+                    select: {
+                      firstname: true,
+                      lastname: true,
+                      profilepic: true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      })
       return res.status(200).json({
-        message: `User with ${memberId} has been deleted`,
+        message: ` ${name ? name : " User "} has been removed from the group`,
         success: true,
+        group: updatedgroup,
       });
     } catch (err: any) {
       console.log(err);
