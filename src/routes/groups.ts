@@ -651,6 +651,139 @@ grouprouter.delete(
   }
 );
 
+//leave group route
+grouprouter.delete(
+  "/:groupId/leave",
+  userMiddleware,
+  async (req: AuthRequest, res) => {
+    const userId = (req as any).user.id;
+    const { groupId } = req.params;
+
+    try {
+      // 🧩 1️⃣ Get the user’s profile (since membership links via profile)
+      const profile = await prisma.profile.findUnique({
+        where: { userId },
+        select: { id: true },
+      });
+
+      if (!profile) {
+        return res.status(404).json({
+          message: "User profile not found",
+          success: false,
+        });
+      }
+
+      // 🧩 2️⃣ Find if user is actually a member of the group
+      const membership = await prisma.groupMember.findUnique({
+        where: {
+          groupId_profileId: {
+            groupId,
+            profileId: profile.id,
+          },
+        },
+      });
+
+      if (!membership) {
+        return res.status(400).json({
+          message: "You are not a member of this group",
+          success: false,
+        });
+      }
+
+      // 🧩 3️⃣ Fetch group to verify and update member count
+      const group = await prisma.group.findUnique({
+        where: { id: groupId },
+        select: {
+          id: true,
+          name: true,
+          adminId: true,
+          memberCount: true,
+        },
+      });
+
+      if (!group) {
+        return res.status(404).json({
+          message: "Group not found",
+          success: false,
+        });
+      }
+
+      // ❌ 4️⃣ Prevent admin from leaving (optional)
+      if (group.adminId === userId) {
+        return res.status(403).json({
+          message: "Admin cannot leave the group. Transfer admin rights first.",
+          success: false,
+        });
+      }
+
+      // 🧩 5️⃣ Remove the member
+      await prisma.groupMember.delete({
+        where: {
+          groupId_profileId: {
+            groupId,
+            profileId: profile.id,
+          },
+        },
+      });
+
+      // 🧩 6️⃣ Update member count
+      await prisma.group.update({
+        where: { id: groupId },
+        data: {
+          memberCount: group.memberCount - 1,
+        },
+      });
+
+      // 🧩 7️⃣ (Optional) Notify admin about member leaving
+      await prisma.notification.create({
+        data: {
+          userId: group.adminId,
+          type: "SYSTEM",
+          content: `A member has left your group "${group.name}".`,
+        },
+      });
+
+      // 🧩 8️⃣ Fetch updated group details
+      const updatedGroup = await prisma.group.findFirst({
+        where: { id: groupId },
+        include: {
+          admin: true,
+          members: {
+            include: {
+              profile: {
+                include: {
+                  user: {
+                    select: {
+                      firstname: true,
+                      lastname: true,
+                      profilepic: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      return res.status(200).json({
+        message: "You have successfully left the group",
+        success: true,
+        group: updatedGroup,
+      });
+    } catch (err: any) {
+      console.error(err);
+      return res.status(500).json({
+        message: "Something went wrong",
+        success: false,
+      });
+    }
+  }
+);
+
+
+
+
 grouprouter.post(
   "/:groupId/memberId/:memberId",
   userMiddleware,
