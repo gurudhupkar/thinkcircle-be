@@ -96,7 +96,7 @@ export const generateGroupSummary = async (req: AuthRequest, res: Response) => {
     // console.log(chatText);
     const prompt = `
 You are an AI study assistant. Analyze the following group chat and produce a structured summary.
-
+Keep the output with proper capitalization and punctuation.
 Chat:
 ${chatText}
 

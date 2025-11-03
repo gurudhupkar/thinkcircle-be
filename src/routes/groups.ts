@@ -617,8 +617,8 @@ grouprouter.delete(
       // Start transaction
       await prisma.$transaction(async (tx) => {
         // 1️⃣ Delete related data
-        await tx.groupMember.deleteMany({ where: { groupId } });
         await tx.message.deleteMany({ where: { groupId } });
+        await tx.groupMember.deleteMany({ where: { groupId } });
         await tx.groupJoinRequest.deleteMany({ where: { groupId } });
         await tx.summary.deleteMany({ where: { groupId } });
         await tx.group.delete({ where: { id: groupId } });

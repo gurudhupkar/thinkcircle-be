@@ -177,7 +177,7 @@ export function initSocket(server: HttpServer) {
 
     socket.on("typing", ({ groupId }) => {
       if (!groupId) return;
-      socket.to(groupId).emit("user-typing", { userId: socket.data.user.id });
+      socket.to(groupId).emit("user-typing", { fullname: socket.data.user.firstname + " " + socket.data.user.lastname, userId: socket.data.user.id });
     });
 
     // 🟠 Message Read Receipts
