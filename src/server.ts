@@ -43,6 +43,9 @@ var corsOptions = {
     "http://localhost:5000",
     "http://localhost:3500",
     "http://127.0.0.1:5500",
+    "http://thinkcircle.dhupkar.in",
+    "https://thinkcircle.dhupkar.in",
+
   ],
   credentials: true,
 
