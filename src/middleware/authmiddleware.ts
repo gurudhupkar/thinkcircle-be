@@ -3,7 +3,7 @@ import * as dotenv from "dotenv";
 import { Request, Response, NextFunction } from "express";
 import { PrismaClient } from "@prisma/client";
 import path = require("path");
-dotenv.config({ path: path.resolve(__dirname, "../.env") });
+dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
 const JWT_USER_SEC = process.env.SECRET_KEY || "";
 const prisma = new PrismaClient();
