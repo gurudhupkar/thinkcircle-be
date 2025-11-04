@@ -917,8 +917,9 @@ grouprouter.post(
   async (req: AuthRequest, res) => {
     try {
       const { groupId } = req.params;
-      const { message } = req.body;
+      const { message, profileId } = req.body;
       const senderId = (req as any).user.id;
+      console.log(profileId)
       if (!senderId || !groupId) {
         return res.status(400).json({
           success: false,
@@ -930,10 +931,12 @@ grouprouter.post(
           .status(400)
           .json({ success: false, message: "please upload the file" });
       }
-
+      console.log(req.file)
+      console.log(req.user)
       const member = await prisma.groupMember.findUnique({
-        where: { groupId_profileId: { groupId, profileId: req.user!.id } },
+        where: { groupId_profileId: { groupId, profileId: profileId } },
       });
+      console.log(member)
       if (!member) {
         return res.status(401).json({
           success: false,

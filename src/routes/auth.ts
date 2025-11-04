@@ -119,7 +119,7 @@ userRouter.get("/me", userMiddleware, async (req: AuthRequest, res) => {
   const userId = (req as any).user?.id;
   // console.log(userId)
   try {
-    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const user = await prisma.user.findUnique({ where: { id: userId }, include: { profile: true } });
     if (!user) {
       return res.status(403).json({
         message: "User Not Logged In",
