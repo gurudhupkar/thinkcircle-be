@@ -10,7 +10,7 @@ const JWT_USER_SEC = process.env.SECRET_KEY || "YOUR_SECRET_FOR_TESTING";
 export let io: IOServer;
 
 export function initSocket(server: HttpServer) {
-  const io = new IOServer(server, {
+  io = new IOServer(server, {
     cors: {
       origin: ["http://127.0.0.1:5500", "http://localhost:3000"],
       credentials: true,
@@ -139,11 +139,11 @@ export function initSocket(server: HttpServer) {
             senderId: socket.data.user.id,
             attachments: attachments
               ? {
-                create: attachments.map((att: any) => ({
-                  url: att.url,
-                  type: att.type,
-                })),
-              }
+                  create: attachments.map((att: any) => ({
+                    url: att.url,
+                    type: att.type,
+                  })),
+                }
               : undefined,
           },
           include: {
@@ -177,7 +177,10 @@ export function initSocket(server: HttpServer) {
 
     socket.on("typing", ({ groupId }) => {
       if (!groupId) return;
-      socket.to(groupId).emit("user-typing", { fullname: socket.data.user.firstname + " " + socket.data.user.lastname, userId: socket.data.user.id });
+      socket.to(groupId).emit("user-typing", {
+        fullname: socket.data.user.firstname + " " + socket.data.user.lastname,
+        userId: socket.data.user.id,
+      });
     });
 
     // 🟠 Message Read Receipts
@@ -230,14 +233,15 @@ export function initSocket(server: HttpServer) {
       }
     });
 
-
-
     // fetch messages
     // 📨 Fetch Messages with Pagination
     socket.on("fetch-messages", async (payload, ack) => {
       try {
-        const { groupId, before, limit = 30 } =
-          typeof payload === "string" ? JSON.parse(payload) : payload || {};
+        const {
+          groupId,
+          before,
+          limit = 30,
+        } = typeof payload === "string" ? JSON.parse(payload) : payload || {};
 
         if (!groupId) return sendAck(ack, false, "groupId missing");
 
@@ -331,9 +335,6 @@ export function initSocket(server: HttpServer) {
         sendAck(ack, false, "server error");
       }
     });
-
-
-
 
     // 🔻 Disconnect
     socket.on("disconnect", () => {

@@ -206,8 +206,9 @@ grouprouter.post("/join/:id", userMiddleware, async (req: AuthRequest, res) => {
         data: {
           userId: group.adminId,
           type: "JOIN_REQUEST",
-          content: `User ${(req as any).user.firstname} ${(req as any).user.lastname
-            } requested to join your group ${group.name}`,
+          content: `User ${(req as any).user.firstname} ${
+            (req as any).user.lastname
+          } requested to join your group ${group.name}`,
         },
       });
 
@@ -485,19 +486,19 @@ grouprouter.post(
           });
 
           let grp = await tx.group.findFirst({
-            where: { id: groupId }
-          })
+            where: { id: groupId },
+          });
 
           if (grp) {
-
             const oldMemberCount = grp?.memberCount;
             await tx.group.update({
-              where: { id: groupId }, data: {
-                memberCount: oldMemberCount + 1
-              }
-            })
+              where: { id: groupId },
+              data: {
+                memberCount: oldMemberCount + 1,
+              },
+            });
           } else {
-            throw new Error("Could not update member count")
+            throw new Error("Could not update member count");
           }
 
           const profile = await prisma.profile.findUnique({
@@ -531,21 +532,20 @@ grouprouter.post(
           });
 
           let grp = await tx.group.findFirst({
-            where: { id: groupId }
-          })
+            where: { id: groupId },
+          });
 
           if (grp) {
-
             const oldMemberCount = grp?.memberCount;
             await tx.group.update({
-              where: { id: groupId }, data: {
-                memberCount: oldMemberCount - 1
-              }
-            })
+              where: { id: groupId },
+              data: {
+                memberCount: oldMemberCount - 1,
+              },
+            });
           } else {
-            throw new Error("Could not update member count")
+            throw new Error("Could not update member count");
           }
-
 
           if (profile) {
             await tx.notification.create({
@@ -560,7 +560,7 @@ grouprouter.post(
             message: "Your request has been rejected",
             success: true,
           });
-        })
+        });
       }
 
       return res.status(400).json({
@@ -610,9 +610,7 @@ grouprouter.delete(
       }
 
       // Extract member userIds (excluding admin if needed)
-      const memberUserIds = group.members.map(
-        (m) => m.profile.userId
-      );
+      const memberUserIds = group.members.map((m) => m.profile.userId);
 
       // Start transaction
       await prisma.$transaction(async (tx) => {
@@ -781,9 +779,6 @@ grouprouter.delete(
   }
 );
 
-
-
-
 grouprouter.post(
   "/:groupId/memberId/:memberId",
   userMiddleware,
@@ -812,14 +807,13 @@ grouprouter.post(
                       firstname: true,
                       lastname: true,
                     },
-                  }
+                  },
                 },
               },
             },
           },
         },
       });
-
 
       if (group?.adminId !== userId) {
         return res.status(403).json({
@@ -850,16 +844,16 @@ grouprouter.post(
           },
         });
         if (group) {
-          let id = group?.members.find(m => m.profile.id === memberId)?.profile.userId;
+          let id = group?.members.find((m) => m.profile.id === memberId)
+            ?.profile.userId;
 
           await prisma.group.update({
             where: { id: groupId },
             data: {
-              memberCount: group.memberCount - 1
-            }
+              memberCount: group.memberCount - 1,
+            },
           });
           if (id) {
-
             await prisma.notification.create({
               data: {
                 userId: id,
@@ -870,7 +864,8 @@ grouprouter.post(
           }
         }
       }
-      let name = group?.members.find(m => m.profile.id === memberId)?.profile.user.firstname
+      let name = group?.members.find((m) => m.profile.id === memberId)?.profile
+        .user.firstname;
 
       const updatedgroup = await prisma.group.findFirst({
         where: { id: groupId },
@@ -884,15 +879,15 @@ grouprouter.post(
                     select: {
                       firstname: true,
                       lastname: true,
-                      profilepic: true
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      })
+                      profilepic: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
       return res.status(200).json({
         message: ` ${name ? name : " User "} has been removed from the group`,
         success: true,
@@ -919,7 +914,7 @@ grouprouter.post(
       const { groupId } = req.params;
       const { message, profileId } = req.body;
       const senderId = (req as any).user.id;
-      console.log(profileId)
+      console.log(profileId);
       if (!senderId || !groupId) {
         return res.status(400).json({
           success: false,
@@ -931,12 +926,12 @@ grouprouter.post(
           .status(400)
           .json({ success: false, message: "please upload the file" });
       }
-      console.log(req.file)
-      console.log(req.user)
+      console.log(req.file);
+      console.log(req.user);
       const member = await prisma.groupMember.findUnique({
         where: { groupId_profileId: { groupId, profileId: profileId } },
       });
-      console.log(member)
+      console.log(member);
       if (!member) {
         return res.status(401).json({
           success: false,
@@ -955,7 +950,9 @@ grouprouter.post(
         await prisma.messageAttachment.create({
           data: {
             messageId: newmessage.id,
-            url: `/uploads/${req.file.filename}`,
+            url: `${req.protocol}://${req.get("host")}/uploads/${senderId}/${
+              req.file.filename
+            }`,
             type: "FILE",
           },
         });
@@ -964,7 +961,12 @@ grouprouter.post(
         where: { id: newmessage.id },
         include: { attachments: true, sender: true },
       });
+      if (!io) {
+        console.error("❌ Socket.io not initialized yet");
+        return;
+      }
       io.to(groupId).emit("new-message", fullMessage);
+
       res.json(fullMessage);
     } catch (err: any) {
       console.log(err);
@@ -976,12 +978,11 @@ grouprouter.post(
   }
 );
 
-
 // group details route
 
 grouprouter.get("/:id/details", userMiddleware, async (req, res) => {
   const userId = (req as any).user.id;
-  const id = req.params.id
+  const id = req.params.id;
   try {
     const group = await prisma.group.findFirst({
       where: { id },
@@ -995,27 +996,30 @@ grouprouter.get("/:id/details", userMiddleware, async (req, res) => {
                   select: {
                     firstname: true,
                     lastname: true,
-                    profilepic: true
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    })
+                    profilepic: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
     if (group) {
-      res.status(200).json({ success: true, message: "Group found", group })
+      res.status(200).json({ success: true, message: "Group found", group });
     } else {
-      res.status(401).json({ error: true, message: "You are not a member of this group." })
+      res
+        .status(401)
+        .json({ error: true, message: "You are not a member of this group." });
     }
   } catch (err) {
-    console.log(err)
-    res.status(503).json({ error: true, message: "Unable to fetch group details. Please try again later" })
+    console.log(err);
+    res.status(503).json({
+      error: true,
+      message: "Unable to fetch group details. Please try again later",
+    });
   }
-
-})
-
+});
 
 // Edit group name and description
 grouprouter.put(
@@ -1072,15 +1076,14 @@ grouprouter.put(
                     select: {
                       firstname: true,
                       lastname: true,
-                      profilepic: true
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-
+                      profilepic: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
       });
 
       return res.status(200).json({
@@ -1097,7 +1100,5 @@ grouprouter.put(
     }
   }
 );
-
-
 
 export { grouprouter };
