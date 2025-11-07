@@ -102,6 +102,7 @@ model GroupJoinRequest {
   id        String        @id @default(uuid())
   group     Group         @relation(fields: [groupId], references: [id])
   groupId   String
+  requestMessage String   @default("")
   profile   Profile       @relation(fields: [profileId], references: [id])
   profileId String
   status    RequestStatus @default(PENDING)

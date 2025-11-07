@@ -74,12 +74,53 @@ grouprouter.post(
 grouprouter.get("/groups", userMiddleware, async (req: AuthRequest, res) => {
   try {
     const subjectFocus = req.query.subjectFocus as string;
+    const groupId = req.query.groupId as string;
+    const groupName = req.query.groupName as string;
     if (!subjectFocus) {
       throw Error("Enter Subjects ");
     }
-    if (subjectFocus) {
+    if (subjectFocus && !groupId && !groupName) {
       const findgroups = await prisma.group.findMany({
         where: { subjectFocus: subjectFocus },
+        include:{
+          admin: {
+            select: {
+              firstname: true,
+              lastname: true,
+              profilepic: true,
+            }
+          },
+        }
+      });
+
+
+
+      if (!findgroups) {
+        return res.status(400).json({
+          message: "Unable to find the groups",
+          success: false,
+        });
+      } else {
+        return res.status(200).json({
+          message: "Found the groups",
+          success: true,
+          findgroups,
+        });
+      }
+    }
+
+    if(!subjectFocus && groupId || groupName) { 
+      const findgroups = await prisma.group.findMany({
+        where: { id: groupId, OR: [{ name: groupName }] },
+        include:{
+          admin: {
+            select: {
+              firstname: true,
+              lastname: true,
+              profilepic: true,
+            }
+          },
+        }
       });
       if (!findgroups) {
         return res.status(400).json({
@@ -133,6 +174,7 @@ grouprouter.post("/join/:id", userMiddleware, async (req: AuthRequest, res) => {
   const userId = (req as any).user.id;
   const subjectFocus = req.body.subjectFocus;
   const groupId = req.params.id;
+  const requestMessage = req.body.requestMessage || "";
 
   try {
     const result = await prisma.$transaction(async (tx) => {
@@ -197,6 +239,7 @@ grouprouter.post("/join/:id", userMiddleware, async (req: AuthRequest, res) => {
       const joinRequest = await tx.groupJoinRequest.create({
         data: {
           groupId,
+          requestMessage,
           profileId: profile.id,
           status: "PENDING",
         },
